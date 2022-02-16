@@ -1,0 +1,130 @@
+#!/usr/bin/env python
+
+import sys
+import math
+import json
+
+import rospy
+import tf2_ros 
+import tf2_geometry_msgs
+from tf.transformations import quaternion_from_euler
+from geometry_msgs.msg import TransformStamped, Vector3, PoseStamped, Pose
+from crazyflie_driver.msg import Position
+from aruco_msgs.msg import MarkerArray
+#from std_msgs.msg import UInt32MultiArray
+
+# Current MarkerArray (global state)
+all_markers = None
+#markerID_array = None
+last_odom = None
+
+def callback1(markers_in):
+    global all_markers
+    all_markers = markers_in
+	
+def publish_tf():
+
+    global all_markers
+
+    if not all_markers: #If no markers have been seen, create empty marker array
+	all_markers = MarkerArray()
+
+    odom = Pose()
+    odom.position.x = 0	
+    odom.position.y = 0
+    odom.position.z = 0
+    yaw = 0
+	
+    #Iterate over all markers
+    for marker in all_markers.markers:
+
+	#Get Pose of marker in odom-frame
+        markerpose = PoseStamped()
+        markerpose.header.frame_id = marker.header.frame_id
+        markerpose.header.stamp = marker.header.stamp #rospy.Time.now()
+        markerpose.pose = marker.pose.pose
+
+	timeout = rospy.Duration(0.01)
+
+        Transformation
+	if not tf_buf.can_transform(markerpose.header.frame_id, 'cf1/odom', marker.header.stamp, timeout):
+            rospy.logwarn_throttle(5.0, 'No transform from %s to map' % markerpose.header.frame_id)
+            return
+
+        transformed_marker = tf_buf.transform(markerpose, 'cf1/odom', timeout)
+
+	#Get Pose of real marker in map frame
+        
+
+
+	#Transform = TransformStamped()
+	#Transform.header.frame_id = 'map'
+	#Transform.child_frame_id = '/aruco/detected' + str(marker.id)
+	#Transform.header.stamp = marker.header.stamp #rospy.Time.now()
+
+	#Transform.transform.translation.x = transformed_marker.pose.position.x
+        #Transform.transform.translation.y = transformed_marker.pose.position.y
+        #Transform.transform.translation.z = transformed_marker.pose.position.z
+        #Transform.transform.rotation.x = transformed_marker.pose.orientation.x
+        #Transform.transform.rotation.y = transformed_marker.pose.orientation.y
+        #Transform.transform.rotation.z = transformed_marker.pose.orientation.z
+        #Transform.transform.rotation.w = transformed_marker.pose.orientation.w
+       
+        #Broadcast
+	#if marker.id in markerID_array.data:
+       	#broadcaster.sendTransform(Transform)
+
+	odom.position.x = xxx	
+        odom.position.y = xxx
+	(_, _, yaw) = euler_from_quaternion( xxx, xxx, xxx, xxx )
+
+	global last_odom
+	last_odom = odom
+
+
+    if last_odom: #if we ever saw a marker
+	odom = last_odom
+
+	#Publish flag ...
+
+    (trans,rot) = tf_lstn.lookupTransform('map', '/aruco/marker1', rospy.Time(0))
+    #print trans
+    #print rot
+
+    #Publish Transform from map to cf1/odom
+    Transform = TransformStamped()
+    Transform.header.frame_id = 'map'
+    Transform.child_frame_id = 'cf1/odom'
+    Transform.header.stamp = rospy.Time.now()
+
+    Transform.transform.translation.x = odom.position.x
+    Transform.transform.translation.y = odom.position.y
+    Transform.transform.translation.z = 0
+    (Transform.transform.rotation.x,
+     Transform.transform.rotation.y,
+     Transform.transform.rotation.z,
+     Transform.transform.rotation.w) = quaternion_from_euler(0, 0, yaw)
+       
+    #Broadcast
+    broadcaster.sendTransform(Transform)
+
+
+
+rospy.init_node('loc1')
+ros_sub1 = rospy.Subscriber('/aruco/markers', MarkerArray, callback1)
+#ros_sub2 = rospy.Subscriber('/aruco/markers_list', UInt32MultiArray, callback2) 
+tf_buf   = tf2_ros.Buffer()
+tf_lstn  = tf2_ros.TransformListener(tf_buf)
+broadcaster = tf2_ros.TransformBroadcaster()
+
+def main():
+    rospy.sleep(.5)
+    rate = rospy.Rate(10)  # Hz
+    while not rospy.is_shutdown():
+        publish_tf()
+        rate.sleep()
+    rospy.spin()
+
+if __name__ == "__main__":
+    main()
+
