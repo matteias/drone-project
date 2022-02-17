@@ -116,6 +116,7 @@ ros_sub1 = rospy.Subscriber('/aruco/markers', MarkerArray, callback1)
 tf_buf   = tf2_ros.Buffer()
 tf_lstn  = tf2_ros.TransformListener(tf_buf)
 broadcaster = tf2_ros.TransformBroadcaster()
+broadcaster.sendTransform(xxx)
 
 def main():
     rospy.sleep(.5)
