@@ -87,7 +87,7 @@ def publish_tf():
 
 	#Publish flag ...
 
-    (trans,rot) = tf_lstn.lookupTransform('map', '/aruco/marker1', rospy.Time(0))
+    (trans,rot) = tf_lstn.lookupTransform('map', '/aruco/marker1', rospy.Time(0),rospy.Duration(0.1))
     #print trans
     #print rot
 
