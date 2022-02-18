@@ -4,24 +4,78 @@ import sys
 import math
 import json
 
+import math
+import tf
 import rospy
 import tf2_ros 
 import tf2_geometry_msgs
 from tf.transformations import quaternion_from_euler
+from pyquaternion import Quaternion
 from geometry_msgs.msg import TransformStamped, Vector3, PoseStamped, Pose
 from crazyflie_driver.msg import Position
 from aruco_msgs.msg import MarkerArray
+
 #from std_msgs.msg import UInt32MultiArray
 
-# Current MarkerArray (global state)
+# id_list for marker id (global state)
 all_markers = None
 #markerID_array = None
 last_odom = None
 
-def callback1(markers_in):
-    global all_markers
-    all_markers = markers_in
+rospy.init_node('loc1')
+ros_sub1 = rospy.Subscriber('/aruco/markers', MarkerArray, callback1)
+#ros_sub2 = rospy.Subscriber('/aruco/markers_list', UInt32MultiArray, callback2) 
+tf_buf   = tf2_ros.Buffer()
+tf_lstn  = tf2_ros.TransformListener(tf_buf)
+broadcaster = tf2_ros.TransformBroadcaster()
+
+def callback1(msg):
+    global id_list
+    id_list=[]
+    id = []
+    for marker in msg.markers:
+        tc2m = TransformStamped()
+        tc2m.header.stamp = rospy.Time.now()
+
+        if marker.id != 0:
+            tc2m.header.frame_id = 'cf1/camera_link'#
+            tc2m.child_frame_id = 'aruco/detected'+str(marker.id)
+            tc2m.transform.translation.x = marker.pose.pose.position.x
+            tc2m.transform.translation.y = marker.pose.pose.position.y
+            tc2m.transform.translation.z = marker.pose.pose.position.z
+            tc2m.transform.rotation.x = marker.pose.pose.orientation.x
+            tc2m.transform.rotation.y = marker.pose.pose.orientation.y
+            tc2m.transform.rotation.z = marker.pose.pose.orientation.z
+            tc2m.transform.rotation.w = marker.pose.pose.orientation.w
+            broadcaster.sendTransform(tc2m)
+            id.append(marker.id)
+    id_list= id
+id_list =[]
 	
+def transformation_matrix(trans):
+    mat = Quaternion(
+        trans.rotation.w,
+        trans.rotation.x,
+        trans.rotation.y,
+        trans.rotation.z)
+    mat = mat.transformation_matrix
+    mat[0][3] = trans.translation.x
+    mat[1][3] = trans.translation.y
+    mat[2][3] = trans.translation.z
+    return mat
+
+def transformation(mat):
+    q = Quaternion(matrix=mat)
+    trans = TransformStamped()
+    trans.transform.translation.x = mat[0][3]
+    trans.transform.translation.y = mat[1][3]
+    trans.transform.translation.z = mat[2][3]
+    trans.transform.rotation.x = q[1]
+    trans.transform.rotation.y = q[2]
+    trans.transform.rotation.z = q[3]
+    trans.transform.rotation.w = q[0]
+    return trans
+
 def publish_tf():
 
     global all_markers
@@ -110,21 +164,19 @@ def publish_tf():
 
 
 
-rospy.init_node('loc1')
-ros_sub1 = rospy.Subscriber('/aruco/markers', MarkerArray, callback1)
-#ros_sub2 = rospy.Subscriber('/aruco/markers_list', UInt32MultiArray, callback2) 
-tf_buf   = tf2_ros.Buffer()
-tf_lstn  = tf2_ros.TransformListener(tf_buf)
-broadcaster = tf2_ros.TransformBroadcaster()
 
 
 def main():
+	markerDetected = false
     rospy.sleep(.5)
     rate = rospy.Rate(10)  # Hz
     while not rospy.is_shutdown():
 	try:
-	    if 
-        publish_tf()
+	    if id_list:
+        	for id in id_list:
+                markeratmap = 'aruco/marker' + str(id)
+                detectedmarker = 'aruco/detected' +str(id)
+                trans = tfBuffer.lookup_transform(detectedmarker,'cf1/odom',rospy.Time(0),rospy.Duration(0.1))
 	broadcaster.sendTransform(xxx)
         rate.sleep()
     rospy.spin()
