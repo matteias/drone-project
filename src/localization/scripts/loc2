@@ -77,7 +77,6 @@ def transform(msg):
     id_list= id
 id_list =[]
 
-
 def compute_avg_transform():
     print('Computing average transform')
     global trans_average
@@ -106,13 +105,11 @@ def compute_avg_transform():
 
     trans_average = tr
 
-
 def normalize(v):
 	norm = np.linalg.norm(v)
 	if norm == 0 :
 		return v
 	return v / norm
-
 
 def main():
     global trans_average
