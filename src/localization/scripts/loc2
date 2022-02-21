@@ -20,7 +20,6 @@ from crazyflie_gazebo.msg import Position
 from pyquaternion import Quaternion
 queue = collections.deque(maxlen = 8)
 
-broadcaster2 = tf2_ros.StaticTransformBroadcaster()
 broadcaster = tf2_ros.TransformBroadcaster()
 trans_average = None
 
@@ -47,4 +46,110 @@ def transformation(mat):
     trans.transform.rotation.z = q[3]
     trans.transform.rotation.w = q[0]
     return trans
-    
+
+#average the transform between map and odom
+def multiply_transforms(trans1, trans2):
+    mat1 = transformation_matrix(trans1)
+    mat2 = transformation_matrix(trans2)
+    return transformation(np.matmul(mat1, mat2))
+
+def transform(msg):
+    global id_list
+    id_list=[]
+    id = []
+    for marker in msg.markers:
+        t = TransformStamped()
+        t.header.stamp = rospy.Time.now()
+
+        if marker.id != 0:
+            t.header.frame_id = 'cf1/camera_link'
+            t.child_frame_id = 'aruco/detected'+str(marker.id)
+            t.transform.translation.x = marker.pose.pose.position.x
+            t.transform.translation.y = marker.pose.pose.position.y
+            t.transform.translation.z = marker.pose.pose.position.z
+            t.transform.rotation.x = marker.pose.pose.orientation.x
+            t.transform.rotation.y = marker.pose.pose.orientation.y
+            t.transform.rotation.z = marker.pose.pose.orientation.z
+            t.transform.rotation.w = marker.pose.pose.orientation.w
+            broadcaster.sendTransform(t)
+            id.append(marker.id)
+    id_list= id
+id_list =[]
+
+def compute_avg_transform():
+    print('Computing average transform')
+    global trans_average
+    x_avg = np.mean(np.array([transform.transform.translation.x for transform in queue]))
+    y_avg = np.mean(np.array([transform.transform.translation.y for transform in queue]))
+    z_avg = np.mean(np.array([transform.transform.translation.z for transform in queue]))
+
+    quats = [ (transform.transform.rotation.x, transform.transform.rotation.y, transform.transform.rotation.z, transform.transform.rotation.w) for transform in queue]
+    Q = np.transpose(np.array(quats))
+
+    M = np.dot(Q,Q.T)
+
+    w,v = np.linalg.eig(M)
+    vec = v[:,np.argmax(w)]
+
+    mean_quat = normalize(vec)
+
+    tr = TransformStamped()
+    tr.transform.translation.x, tr.transform.translation.y, tr.transform.translation.z = x_avg, y_avg, 0
+    x, y, z, w = mean_quat[0], mean_quat[1], mean_quat[2], mean_quat[3]
+    roll, pitch, yaw = euler_from_quaternion((x, y, z, w))
+    (tr.transform.rotation.x,
+    tr.transform.rotation.y,
+    tr.transform.rotation.z,
+    tr.transform.rotation.w) = quaternion_from_euler(0,0,yaw)
+
+    trans_average = tr
+
+
+def normalize(v):
+	norm = np.linalg.norm(v)
+	if norm == 0 :
+		return v
+	return v / norm
+
+def main():
+    global trans_average
+    rospy.init_node('loc2')
+    rospy.Subscriber('/aruco/markers', MarkerArray, transform)
+    tf_buf = tf2_ros.Buffer()
+    tf_lstn = tf2_ros.TransformListener(tf_buf)
+    rate = rospy.Rate(10.0)
+    found = False
+
+    while not rospy.is_shutdown():
+        try:
+            if id_list:
+                for id in id_list:
+                    markeratmap = 'aruco/marker' + str(id)
+                    detectedmarker = 'aruco/detected' +str(id)
+                    trans2 = tfBuffer.lookup_transform(detectedmarker,'cf1/odom',rospy.Time(0),rospy.Duration(0.1))
+                    trans1 = tfBuffer.lookup_transform('map',markeratmap,rospy.Time(0),rospy.Duration(0.1))
+                    trans = multiply_transforms(trans1.transform, trans2.transform)
+                    queue.append(trans)
+                compute_avg_transform()
+                t = trans_average
+                t.header.stamp = rospy.Time.now()
+                t.header.frame_id = 'map'
+                t.child_frame_id = 'cf1/odom'
+                br = tf2_ros.TransformBroadcaster()
+                br.sendTransform(t)
+                found = True
+                print('detecting marker')
+
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+            print('not detecting marker')
+            if found:
+                old_transform = trans_average
+                old_transform.header.stamp = rospy.Time.now()
+                old_transform.header.frame_id = 'map'
+                old_transform.child_frame_id = 'cf1/odom'
+                br = tf2_ros.TransformBroadcaster()
+                br.sendTransform(old_transform)
+
+
+if __name__ == "__main__":
+    main()
