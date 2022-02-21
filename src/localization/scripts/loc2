@@ -126,8 +126,8 @@ def main():
                 for id in id_list:
                     markeratmap = 'aruco/marker' + str(id)
                     detectedmarker = 'aruco/detected' +str(id)
-                    trans2 = tfBuffer.lookup_transform(detectedmarker,'cf1/odom',rospy.Time(0),rospy.Duration(0.1))
-                    trans1 = tfBuffer.lookup_transform('map',markeratmap,rospy.Time(0),rospy.Duration(0.1))
+                    trans2 = tf_buf.lookup_transform(detectedmarker,'cf1/odom',rospy.Time(0),rospy.Duration(0.1))
+                    trans1 = tf_buf.lookup_transform('map',markeratmap,rospy.Time(0),rospy.Duration(0.1))
                     trans = multiply_transforms(trans1.transform, trans2.transform)
                     queue.append(trans)
                 compute_avg_transform()
