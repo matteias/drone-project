@@ -10,6 +10,7 @@ project(localization)
 find_package(catkin REQUIRED COMPONENTS
   aruco_msgs
   crazyflie_gazebo
+  crazyflie_driver
   geometry_msgs
   rospy
   std_msgs
@@ -110,7 +111,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES localization
-#  CATKIN_DEPENDS aruco_msgs crazyflie_gazebo geometry_msgs json numpy pyquaternion rospy std_msgs tf tf2_geometry_msgs tf2_ros
+#  CATKIN_DEPENDS aruco_msgs crazyflie_driver crazyflie_gazebo geometry_msgs json numpy pyquaternion rospy std_msgs tf tf2_geometry_msgs tf2_ros
 #  DEPENDS system_lib
 )
 
