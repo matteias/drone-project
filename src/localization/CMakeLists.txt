@@ -8,11 +8,13 @@ project(localization)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  crazyflie_driver
+  aruco_msgs
+  crazyflie_gazebo
   geometry_msgs
   rospy
   std_msgs
   tf
+  tf2_geometry_msgs
   tf2_ros
 )
 
@@ -73,7 +75,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## Generate added messages and services with any dependencies listed here
 # generate_messages(
 #   DEPENDENCIES
-#   geometry_msgs#   std_msgs
+#   aruco_msgs#   geometry_msgs#   std_msgs#   tf2_geometry_msgs
 # )
 
 ################################################
@@ -108,7 +110,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES localization
-#  CATKIN_DEPENDS crazyflie_driver geometry_msgs rospy std_msgs tf tf2_ros
+#  CATKIN_DEPENDS aruco_msgs crazyflie_gazebo geometry_msgs json numpy pyquaternion rospy std_msgs tf tf2_geometry_msgs tf2_ros
 #  DEPENDS system_lib
 )
 
