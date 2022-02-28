@@ -1,0 +1,7 @@
+course_packages/aruco_ros/aruco
+/home/pascal/dd2419_ws/devel/.private/aruco/cmake.lock /home/pascal/dd2419_ws/devel/./cmake.lock
+/home/pascal/dd2419_ws/devel/.private/aruco/share/aruco/cmake/arucoConfig-version.cmake /home/pascal/dd2419_ws/devel/share/aruco/cmake/arucoConfig-version.cmake
+/home/pascal/dd2419_ws/devel/.private/aruco/share/aruco/cmake/arucoConfig.cmake /home/pascal/dd2419_ws/devel/share/aruco/cmake/arucoConfig.cmake
+/home/pascal/dd2419_ws/devel/.private/aruco/lib/libaruco.so /home/pascal/dd2419_ws/devel/lib/libaruco.so
+/home/pascal/dd2419_ws/devel/.private/aruco/lib/pkgconfig/aruco.pc /home/pascal/dd2419_ws/devel/lib/pkgconfig/aruco.pc
+/home/pascal/dd2419_ws/devel/.private/aruco/lib/aruco/optimalmarkers /home/pascal/dd2419_ws/devel/lib/aruco/optimalmarkers

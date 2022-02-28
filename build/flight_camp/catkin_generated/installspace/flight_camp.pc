@@ -1,0 +1,8 @@
+prefix=/home/pascal/dd2419_ws/install
+
+Name: flight_camp
+Description: Description of flight_camp
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

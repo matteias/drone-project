@@ -1,0 +1,1 @@
+/home/pascal/dd2419_ws/devel/.private/aruco_msgs/lib/pkgconfig/aruco_msgs.pc

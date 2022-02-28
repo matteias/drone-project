@@ -1,0 +1,1 @@
+/home/pascal/dd2419_ws/devel/.private/localization/share/localization/cmake/localizationConfig-version.cmake

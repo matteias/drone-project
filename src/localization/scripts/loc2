@@ -15,10 +15,10 @@ from tf.transformations import *
 from geometry_msgs.msg import TransformStamped, Vector3, PoseStamped, Transform, PoseWithCovarianceStamped, PoseWithCovariance, Pose
 from std_msgs.msg import Header
 from aruco_msgs.msg import MarkerArray
-from crazyflie_gazebo.msg import Position
+#from crazyflie_gazebo.msg import Position
 
 from pyquaternion import Quaternion
-queue = collections.deque(maxlen = 8)
+queue = collections.deque(maxlen = 5)
 
 broadcaster = tf2_ros.TransformBroadcaster()
 trans_average = None
@@ -49,7 +49,7 @@ def transformation(mat):
     print("Transformation success")
     return trans
 
-#average the transform between map and odom
+# average the transform between map and odom
 def multiply_transforms(trans1, trans2):
     mat1 = transformation_matrix(trans1)
     mat2 = transformation_matrix(trans2)
@@ -118,7 +118,7 @@ def main():
     rospy.Subscriber('/aruco/markers', MarkerArray, transform)
     tf_buf = tf2_ros.Buffer()
     tf_lstn = tf2_ros.TransformListener(tf_buf)
-    rate = rospy.Rate(20.0)
+    rate = rospy.Rate(3)
     found = False
     #default_tr = TransformStamped()
     #default_tr.transform.translation.x, default_tr.transform.translation.y, default_tr.transform.translation.z =0,0,0 
@@ -131,16 +131,15 @@ def main():
     #default_tr.child_frame_id = 'cf1/odom'
     #br = tf2_ros.TransformBroadcaster()
     #br.sendTransform(default_tr)
- 
+    rospy.sleep(2.0)
     while not rospy.is_shutdown():
         try:
-            rospy.sleep(2.0)
             if id_list:
                 for id in id_list:
                     markeratmap = 'aruco/marker' + str(id)
                     detectedmarker = 'aruco/detected' + str(id)
                     trans1 = tf_buf.lookup_transform('map', markeratmap, rospy.Time.now(), rospy.Duration(0.5))
-                    trans2 = tf_buf.lookup_transform('cf1/odom', 'cf1/base_link', rospy.Time.now(), rospy.Duration(0.5))
+                    trans2 = tf_buf.lookup_transform(detectedmarker, 'cf1/odom', rospy.Time.now(), rospy.Duration(0.5))
                     trans = multiply_transforms(trans1.transform, trans2.transform)
                     queue.append(trans)
                 compute_avg_transform()
@@ -153,7 +152,7 @@ def main():
                 found = True
                 print('detecting marker')
 
-        except (tf2_ros.LookupException, tf2_ros.ConnectivityException):#, tf2_ros.ExtrapolationException):
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
             print('not detecting marker')
             if found:
                 old_transform = trans_average
@@ -163,6 +162,7 @@ def main():
                 br = tf2_ros.TransformBroadcaster()
                 br.sendTransform(old_transform)
             pass
+    rate.sleep()
     rospy.spin()          
 
 if __name__ == "__main__":
