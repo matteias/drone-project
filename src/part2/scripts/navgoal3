@@ -25,11 +25,11 @@ def publish_cmd(goal):
     # Need to tell TF that the goal was just generated
     goal.header.stamp = rospy.Time.now()
 
-    if not tf_buf.can_transform(goal.header.frame_id, 'cf1/odom', goal.header.stamp):
+    if not tf_buf.can_transform(goal.header.frame_id, 'cf1/odom', goal.header.stamp, rospy.Duration(0.5)):
         rospy.logwarn_throttle(5.0, 'No transform from %s to cf1/odom' % goal.header.frame_id)
         return
 
-    goal_odom = tf_buf.transform(goal, 'cf1/odom')
+    goal_odom = tf_buf.transform(goal, 'cf1/odom', rospy.Duration(0.5))
 
     cmd = Position()
 
