@@ -15,7 +15,7 @@ from tf.transformations import *
 from geometry_msgs.msg import TransformStamped, Vector3, PoseStamped, Transform, PoseWithCovarianceStamped, PoseWithCovariance, Pose
 from std_msgs.msg import Header
 from aruco_msgs.msg import MarkerArray
-from crazyflie_gazebo.msg import Position
+#from crazyflie_gazebo.msg import Position
 
 from pyquaternion import Quaternion
 queue = collections.deque(maxlen = 5)
