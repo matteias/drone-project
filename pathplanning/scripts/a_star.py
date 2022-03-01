@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 show_animation = True
-path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal1.world.json"
+path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal2.world.json"
 
 class AStarPlanner:
 
@@ -215,9 +215,9 @@ def main():
     # print("start!!")
 
     # start and goal position
-    sx = 30  # [m]
+    sx = 35  # [m]
     sy = 25  # [m]
-    gx = 30  # [m]
+    gx = 35  # [m]
     gy = 45 # [m]
     grid_size = 2.0  # [m]
     robot_radius = 1.0  # [m]
