@@ -10,7 +10,10 @@ rviz
 rosrun localization loc2
 ```
 ## Perception
-
+The commands for perception node:
+```
+rosrun perception sign_detection.py
+```
 ## Pathplanning
 The commands for map to grid:
 Remember to select the write path and size
