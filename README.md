@@ -12,5 +12,9 @@ rosrun localization loc2
 ## Perception
 
 ## Pathplanning
-
+The commands for map to grid:
+Remember to select the write path and size
+```
+rosrun pathplanning map_creator
+```
 ## Brain
