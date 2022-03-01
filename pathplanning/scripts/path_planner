@@ -6,14 +6,14 @@ from crazyflie_driver.msg import Position
 from a_star import *
 
 def find_path():
-    sx = 30.0  # [m]
+    sx = 35.0  # [m]
     sy = 25.0  # [m]
-    gx = 30.0  # [m]
+    gx = 25.0  # [m]
     gy = 45.0  # [m]
     grid_size = 2.0  # [m]
     robot_radius = 1.0  # [m]
 
-    mapp = Mapping(path, 0.1, 3)
+    mapp = Mapping(path, 0.1, 2)
     matrx = mapp.matrix
     range_of_map = matrx.shape
     horizonal = range_of_map[0]
@@ -43,8 +43,8 @@ def publish_path():
     # print(ry)
     pathx = [c/100 for c in rx]
     pathy = [c/100 for c in ry]
-    pathz = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9]
-    pathyaw = [0]*20
+    pathz = [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]
+    pathyaw = [0]*11
     cmd = Position()
 
     cmd.header.stamp = rospy.Time.now()
@@ -54,18 +54,18 @@ def publish_path():
     pub = rospy.Publisher('/cf1/cmd_position', Position, queue_size=2)
     rate = rospy.Rate(1) # 10hz
     while not rospy.is_shutdown():
-        for i in range(20):
+        for i in range(11):
             cmd.x = pathx[i]
             cmd.y = pathy[i]
             cmd.z = pathz[i]
             cmd.yaw = pathyaw[i]
             pub.publish(cmd)
             rate.sleep()
-        for j in range(20):
-            cmd.x = pathx[19-j]
-            cmd.y = pathy[19-j]
-            cmd.z = pathz[19-j]
-            cmd.yaw = pathyaw[19-j]
+        for j in range(11):
+            cmd.x = pathx[10-j]
+            cmd.y = pathy[10-j]
+            cmd.z = pathz[10-j]
+            cmd.yaw = pathyaw[10-j]
             pub.publish(cmd)
             rate.sleep()
 
