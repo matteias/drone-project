@@ -134,7 +134,7 @@ if __name__== "__main__":
             if bb:
                 for b in bbs:
                     for bstar in b:
-                        cats.append(category_dict[bstar["category_id"]]['name'])
+                        cats.append(category_dict[bstar["category"]]['name'])
                         #print (b)
                         #for bstar in b:
                         #print(bstar["category"])
