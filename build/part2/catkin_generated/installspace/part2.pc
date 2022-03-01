@@ -1,8 +1,0 @@
-prefix=/home/pascal/dd2419_ws/install
-
-Name: part2
-Description: Description of part2
-Version: 0.0.0
-Cflags: 
-Libs: -L${prefix}/lib 
-Requires: 
