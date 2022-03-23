@@ -1,23 +1,30 @@
 # Drone Project
-## Localization
+Execute these commands to run the whole integrated system
 
-The commands for localization node: 
+## Brain
 ```
 roslaunch dd2419_launch base.launch ch:=96
-transform tf for camera_link to base_link
-rosrun localization static
-rviz 
+rviz
+rqt &
+roslaunch dd2419_launch world_publisher.launch world_name:=saal2
+rosrun part2 navgoal3
+rosrun flight_camp roundtrip_saal2
+```
+
+## Localization
+```
+rosrun localization static 
 rosrun localization loc2
 ```
+
 ## Perception
-The commands for perception node:
 ```
 rosrun perception sign_detection.py
 ```
+
 ## Pathplanning
-The commands for map to grid:
-Remember to select the write path and size
+tbf.
 ```
-rosrun pathplanning map_creator
+rosrun planning path_planner
 ```
-## Brain
+
