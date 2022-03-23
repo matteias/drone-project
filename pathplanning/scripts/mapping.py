@@ -34,8 +34,7 @@ class Mapping:
                 map_start, map_end = self.expand(map_start, map_end, expansion)
 
             self.matrix = self.clean_map(map_start, map_end, 0, self.step)
-            # x_length = len(self.matrix[:,0])
-            # y_length = len(self.matrix[0,:])
+            
             self.x_conv = abs(map_start[0])/step_size
             self.y_conv = abs(map_start[1])/step_size
 
@@ -67,11 +66,9 @@ class Mapping:
         elif roadsigns == True:
             size = self.map_data["roadsign_size"]
         else:
-            # Raise error msg later perhaps?
+            print("No marker or roadSign!")
             return 0
 
-        # width = (size[1]/2)/self.step
-        # height = (size[0]/2)/self.step
         points = []
         
         # Below is for 
@@ -133,7 +130,7 @@ class Mapping:
         dx = x2 - x1
         dy = y2 - y1
 
-
+        
         is_steep = abs(dy) > abs(dx)
         if is_steep:
             x1, y1 = y1, x1

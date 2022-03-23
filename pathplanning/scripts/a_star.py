@@ -9,7 +9,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 show_animation = True
-path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal2.world.json"
+path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal1.world.json"
 
 class AStarPlanner:
 
@@ -135,12 +135,6 @@ class AStarPlanner:
         return d
 
     def calc_grid_position(self, index, minp):
-        """
-        calc grid position
-        :param index:
-        :param minp:
-        :return:
-        """
         pos = index * self.reso + minp
         return pos
 
@@ -183,6 +177,7 @@ class AStarPlanner:
         self.ywidth = round((self.maxy - self.miny) / self.reso)
         # print("xwidth:", self.xwidth)
         # print("ywidth:", self.ywidth)
+
         # obstacle map generation
         self.obmap = [[False for i in range(int(self.ywidth))]
                       for i in range(int(self.xwidth))]
@@ -213,16 +208,13 @@ class AStarPlanner:
 
 def main():
     # print("start!!")
+    start = [.5, 2.5]
+    end = [.5, 0.5]
 
-    # start and goal position
-    sx = 35  # [m]
-    sy = 25  # [m]
-    gx = 35  # [m]
-    gy = 45 # [m]
     grid_size = 2.0  # [m]
     robot_radius = 1.0  # [m]
     
-    mapp = Mapping(path, 0.1, 3)
+    mapp = Mapping(path, 0.02, 3)
     matrx = mapp.matrix
     range_of_map = matrx.shape
     horizonal = range_of_map[0]
@@ -233,13 +225,19 @@ def main():
 
     # set obstable positions
     matrx_indx = np.nonzero(matrx == 1) # represent the walls
-    oy_old = matrx_indx[0].tolist()
-    ox_old = matrx_indx[1].tolist()
-    oy = [vertical-i for i in oy_old]
-    ox = [horizonal-i for i in ox_old]
+    oy = matrx_indx[0].tolist()
+    ox = matrx_indx[1].tolist()
+    # oy = [vertical-i for i in oy_old]
+    # ox = [horizonal-i for i in ox_old]
+
+    # start and goal position
+    sx = (start[0]/mapp.step) + mapp.x_conv   # [m]
+    sy = (start[1]/mapp.step) + mapp.y_conv  # [m]
+    gx = (end[0]/mapp.step) + mapp.x_conv  # [m]
+    gy = (end[1]/mapp.step) + mapp.y_conv # [m]
+    # print(sx,sy,gx,gy)
 
     if show_animation:  # pragma: no cover
-
         plt.plot(ox, oy, ".k")
         plt.plot(sx, sy, "og")
         plt.plot(gx, gy, "xb")
@@ -250,10 +248,19 @@ def main():
     rx, ry = a_star.planning(sx, sy, gx, gy)
     rx.reverse()
     ry.reverse()
-    # print(rx,ry)
+    print(mapp.x_conv,mapp.y_conv)
+
+    px,py= [],[]
+    for i in rx:
+        temp=(i-mapp.x_conv)*mapp.step
+        px.append(temp)
+    for i in ry:
+        temp=(i-mapp.y_conv)*mapp.step
+        py.append(temp)
+
     if show_animation:  # pragma: no cover
-        print(rx)
-        print(ry)
+        print(px)
+        print(py)
         plt.plot(rx, ry, "-r")
         plt.show()
 
