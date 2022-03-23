@@ -1,1 +1,0 @@
-/home/pascal/dd2419_ws/devel/.private/crazyflie_driver/share/roseus/ros/crazyflie_driver/srv/AddCrazyflie.l

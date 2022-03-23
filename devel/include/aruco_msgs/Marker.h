@@ -1,1 +1,0 @@
-/home/pascal/dd2419_ws/devel/.private/aruco_msgs/include/aruco_msgs/Marker.h

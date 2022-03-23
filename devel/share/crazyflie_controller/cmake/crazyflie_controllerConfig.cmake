@@ -1,1 +1,0 @@
-/home/pascal/dd2419_ws/devel/.private/crazyflie_controller/share/crazyflie_controller/cmake/crazyflie_controllerConfig.cmake
