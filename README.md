@@ -23,8 +23,8 @@ rosrun perception sign_detection.py
 ```
 
 ## Pathplanning
-tbf.
+animation of path 
 ```
-rosrun planning path_planner
+rosrun Pathplanning a_star.py
 ```
 
