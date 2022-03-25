@@ -193,6 +193,7 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
 
     if len(good)>MIN_MATCH_COUNT:
         success = True
+
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
         dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
         M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC,5.0)
@@ -200,7 +201,7 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
         h,w = img1.shape
         pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
         dst = cv.perspectiveTransform(pts,M)
-        img2 = cv.polylines(img2,[np.int32(dst)],True,255,3, cv.LINE_AA)
+        img2 = cv.polylines(img2,[np.int32(dst)],True,255,1, cv.LINE_AA)
     else:
         print( "Not enough matches are found - {}/{}".format(len(good), MIN_MATCH_COUNT) )
         matchesMask = None
@@ -216,7 +217,7 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
         plt.imshow(img3, 'gray'),plt.show()
 
     if success:
-        return src_pts, dst_pts
+        return pts, dst
     else:
         return None, None
 
@@ -230,30 +231,39 @@ def main():
     kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
 
     image = cv.imread('airport/img_20.jpg')
+    #print(image.shape)
 
-    extracted = grab_based(image)
+    net.get_bbs(image)
+    start, extracted, _ = net.bb_params()
 
-
-    #net.get_bbs(image)
-    #start, extracted, _ = net.bb_params()
+    #extracted = cv.GaussianBlur(extracted,(3,3),cv.BORDER_DEFAULT)
 
     img = cv.cvtColor(extracted,cv.COLOR_BGR2GRAY)
 
     kp2, des2 = sift.detectAndCompute(img, None)
 
+
     src, des = point_corr(kp1, des1, kp2, des2, ref, img) # image keypoints
+
 
     N = src.shape[0]
 
     des = np.reshape(des,(N,2)) # image points
     src = np.reshape(src,(N,2)) # object points
+    #print(src)
+    src = np.flip(src,axis=1)
+    print(src)
+    print(des)
 
+    #print(src.shape)
+    #print(des.shape)
 
     # turn source image points into 3D pose
+    #print(ref.shape)
     hp, wp = ref.shape # pixel height and width
 
-    x0 = int(hp/2)
-    y0 = int(wp/2)
+    x0 = hp/2
+    y0 = wp/2
 
     p_size = 0.123/hp # pixel size in meters
 
@@ -265,7 +275,7 @@ def main():
 
 
     # bring back original image coordinates from bounding box points
-    #des = des + start
+    des = des + start
 
     mtx = np.load('mtx.npy')
     dist = np.load('dist.npy')
@@ -282,14 +292,17 @@ def main():
     temp = np.reshape(temp,(1,4))
 
     T = np.concatenate((T,temp), axis = 0)
+    print(rvec)
+    print(tvec)
 
-    T_inv = np.linalg.inv(T)
-    print(T_inv)
+    #rvec = rvec+np.array([np.pi,0,0])
+    #T_inv = np.linalg.inv(T)
+    #print(T_inv)
 
     #print(T_inv[0:3,0:3])
     #print(T_inv[0:3,3])
-    rvec2, _ = cv.Rodrigues(T_inv[0:3,0:3])
-    tvec2 = T_inv[0:3,3]
+    #rvec2, _ = cv.Rodrigues(T_inv[0:3,0:3])
+    #tvec2 = T_inv[0:3,3]
 
 
 
@@ -311,10 +324,19 @@ def preprocess_airport():
 
     airport = cv.imread('airport2.jpg')
     airport = airport[xs:xs+h,ys:ys+w,:]
+
     #cv.imshow('reference image', airport)
 
-    y0 = int(w/2)
-    x0 = int(h/2)
+
+
+    scale_percent = 25
+    width = int(airport.shape[1] * scale_percent / 100)
+    height = int(airport.shape[0] * scale_percent / 100)
+
+    airport = cv.resize(airport, (width,height), interpolation = cv.INTER_AREA)
+
+    y0 = int(width/2)
+    x0 = int(height/2)
 
     blurred = cv.GaussianBlur(airport,(3,3),cv.BORDER_DEFAULT)
 
@@ -322,17 +344,22 @@ def preprocess_airport():
 
     img = cv.cvtColor(blurred,cv.COLOR_BGR2GRAY)
 
+    show_image = False
+    if show_image:
+
+        cv.imshow('gray',img)
+        print(img.shape)
+
+        if cv.waitKey(0) & 0xff == 27:
+            cv.destroyAllWindows()
+
     return img
 
-    #cv.imshow('gray',img)
-    #print(img.shape)
-
-    #if cv.waitKey(0) & 0xff == 27:
-    #    cv.destroyAllWindows()
 
 
-def grab_based(img):
-    #img = cv.imread('airport/img_21.jpg')
+
+def grab_based():
+    img = cv.imread('airport/img_21.jpg')
 
 
     net = network()
@@ -352,8 +379,12 @@ def grab_based(img):
 
     img = img*mask2[:,:,np.newaxis]
 
-    return img
+    #img = harris(img)
 
+    cv.imshow('grabcut',img)
+
+    if cv.waitKey(0) & 0xff == 27:
+        cv.destroyAllWindows()
 
 
 
