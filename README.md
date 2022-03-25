@@ -8,13 +8,12 @@ rviz
 rqt &
 roslaunch dd2419_launch world_publisher.launch world_name:=saal2
 rosrun part2 navgoal3
-rosrun flight_camp roundtrip_saal2
 ```
 
 ## Localization
 ```
 rosrun localization static 
-rosrun localization loc2
+rosrun localization loc3_sameID
 ```
 
 ## Perception
