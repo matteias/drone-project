@@ -14,7 +14,7 @@ from nav_msgs.msg import OccupancyGrid
 # This matrix is the map, where 0 is free space, 1 is wall, 4 is aruco marker and 5 is a road sign
 # You can create more interesting maps by creating a new json file with a more interesting layout
 # The argument "awesome.world.json" demands that the json file is in the same folder.
-mapp = Mapping("/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal1.world.json", 0.1, 2)
+mapp = Mapping("/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/tutorial_1.world.json", 0.1, 2)
 
 print("mapp done")
 # This gives us the map matrix, which we can use to do path planning with.

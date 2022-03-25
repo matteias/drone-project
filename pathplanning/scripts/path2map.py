@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import rospy
 from crazyflie_driver.msg import Position
 from tf.transformations import quaternion_from_euler
