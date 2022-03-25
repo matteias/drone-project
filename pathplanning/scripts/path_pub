@@ -50,7 +50,9 @@ def find_path(stx,sty,gox,goy):
         py.append(temp)
     px.append(gox)
     py.append(goy)
+
     view_path(px,py)
+    
     return px,py
 
 def view_path(pathx,pathy):
@@ -78,38 +80,6 @@ def view_path(pathx,pathy):
     
     pub_path.publish(path)
     rospy.loginfo("Published {} waypoints.".format(len(path.poses))) 
-
-
-def exe_path(stx,sty,gox,goy):
-    '''
-    stx,sty: start point on map
-    gox,goy: goal point on map
-    '''
-    pathx,pathy = find_path(stx,sty,gox,goy)
-
-    pathz = [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]
-    pathyaw = [0]*11
-    cmd = Position()
-    cmd.header.stamp = rospy.Time.now()
-    cmd.header.frame_id = '10' # a simple random number
-
-    pub = rospy.Publisher('/cf1/cmd_position', Position, queue_size=2)
-    rate = rospy.Rate(1) 
-    while not rospy.is_shutdown():
-        for i in len(pathx):
-            cmd.x = pathx[i]
-            cmd.y = pathy[i]
-            cmd.z = pathz[i]
-            cmd.yaw = pathyaw[i]
-            pub.publish(cmd)
-            rate.sleep()
-        for j in range(11):
-            cmd.x = pathx[10-j]
-            cmd.y = pathy[10-j]
-            cmd.z = pathz[10-j]
-            cmd.yaw = pathyaw[19-j]
-            pub.publish(cmd)
-            rate.sleep()
 
 rospy.init_node('path_planner', anonymous=True)
 rate = rospy.Rate(10)
