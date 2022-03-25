@@ -19,7 +19,6 @@ import cv2 as cv
 import utils
 from detector import Detector
 
-import time
 
 def load_dict():
     category_dict = [
@@ -224,32 +223,72 @@ def main():
     net = network()
     sift = cv.SIFT_create()
 
-    image = cv.imread('airport/img_15.jpg')
+    ref = preprocess_airport()
+
+    kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
+
+    image = cv.imread('airport/img_20.jpg')
 
     net.get_bbs(image)
-    start1, extracted1 = net.bb_params()
+    start, extracted = net.bb_params()
 
-    img1 = cv.cvtColor(extracted1,cv.COLOR_BGR2GRAY)
+    img = cv.cvtColor(extracted,cv.COLOR_BGR2GRAY)
 
-    kp1, des1 = sift.detectAndCompute(img1, None)
+    kp2, des2 = sift.detectAndCompute(img, None)
 
-    ref = cv.imread('airport/img_20.jpg')
+    src, des = point_corr(kp1, des1, kp2, des2, ref, img) # image keypoints
+
+    N = src.shape[0]
+
+    des = np.reshape(des,(N,2))
+    src = np.reshape(src,(N,2))
 
 
-    net.get_bbs(ref)
-    start2, extracted2 = net.bb_params()
+    # turn source image points into 3D pose
+    hp, wp = ref.shape # pixel height and width
 
-    img2 = cv.cvtColor(extracted2,cv.COLOR_BGR2GRAY)
+    x0 = int(hp/2)
+    y0 = int(wp/2)
 
-    tic = time.perf_counter()
-    kp2, des2 = sift.detectAndCompute(img2, None)
-    src, des = point_corr(kp1, des1, kp2, des2, img1, img2)
-    toc = time.perf_counter()
+    p_size = 0.123/hp # pixel size in meters
 
-    print(toc-tic)
+    src = src-np.array([x0,y0]) # move coordinate system into middle of sign
+    src = src*p_size # turn image coordinates into meters
+    src = np.concatenate((src, np.zeros((N,1))),axis=1) # add 0 in Z direction
 
-    #print(src+start1)
-    #print(des+start2)
+
+    # bring back original image coordinates from bounding box points
+    des = des + start
+
+    
+
+
+
+def preprocess_airport():
+    w = 1132
+    h = 726
+    ys = 29
+    xs = 478
+
+    airport = cv.imread('airport2.jpg')
+    airport = airport[xs:xs+h,ys:ys+w,:]
+    #cv.imshow('reference image', airport)
+
+    y0 = int(w/2)
+    x0 = int(h/2)
+
+    blurred = cv.GaussianBlur(airport,(3,3),cv.BORDER_DEFAULT)
+
+    #cv.imshow('Blurred', np.hstack((airport,blurred)))
+
+    img = cv.cvtColor(blurred,cv.COLOR_BGR2GRAY)
+    return img
+
+    #cv.imshow('gray',img)
+    #print(img.shape)
+
+    #if cv.waitKey(0) & 0xff == 27:
+    #    cv.destroyAllWindows()
 
 
 
