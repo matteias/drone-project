@@ -1,0 +1,220 @@
+#!/usr/bin/env python
+import sys
+import rospy
+import json
+import math
+import tf
+import tf2_ros
+import tf2_geometry_msgs
+import numpy as np
+import collections
+
+from tf.transformations import *
+from geometry_msgs.msg import TransformStamped, Vector3, PoseStamped, Transform, PoseWithCovarianceStamped, PoseWithCovariance, Pose
+from std_msgs.msg import Header
+from aruco_msgs.msg import MarkerArray
+#from crazyflie_gazebo.msg import Position
+from pyquaternion import Quaternion
+
+queue = collections.deque(maxlen = 5)
+broadcaster = tf2_ros.TransformBroadcaster()
+trans_average = None
+trans_old = None
+id_list =[]
+
+with open('/home/pascal/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal2_sameID.world.json') as f:
+    world = json.load(f)
+
+def transformation_matrix(trans):
+    mat = Quaternion(
+        trans.rotation.w,
+        trans.rotation.x,
+        trans.rotation.y,
+        trans.rotation.z)
+    mat = mat.transformation_matrix
+    mat[0][3] = trans.translation.x
+    mat[1][3] = trans.translation.y
+    mat[2][3] = trans.translation.z
+    #print("Transform_matrix success")
+    return mat
+
+def transformation(mat):
+    q = Quaternion(matrix=mat)
+    trans = TransformStamped()
+    trans.transform.translation.x = mat[0][3]
+    trans.transform.translation.y = mat[1][3]
+    trans.transform.translation.z = mat[2][3]
+    trans.transform.rotation.x = q[1]
+    trans.transform.rotation.y = q[2]
+    trans.transform.rotation.z = q[3]
+    trans.transform.rotation.w = q[0]
+    #print("Transformation success")
+    return trans
+
+
+def multiply_transforms(trans1, trans2):
+    mat1 = transformation_matrix(trans1)
+    mat2 = transformation_matrix(trans2)
+    #print("mutiply_transforms success")
+    return transformation(np.matmul(mat1, mat2))
+
+def Callback1(msg):
+    global id_list
+    id_list=[]
+    id = []
+    for marker in msg.markers:
+        t = TransformStamped()
+        t.header.stamp = marker.header.stamp
+        if marker.id != 0:
+            t.header.frame_id = 'cf1/camera_link'
+            t.child_frame_id = 'aruco/detected'+str(marker.id)
+            t.transform.translation.x = marker.pose.pose.position.x
+            t.transform.translation.y = marker.pose.pose.position.y
+            t.transform.translation.z = marker.pose.pose.position.z
+            t.transform.rotation.x = marker.pose.pose.orientation.x
+            t.transform.rotation.y = marker.pose.pose.orientation.y
+            t.transform.rotation.z = marker.pose.pose.orientation.z
+            t.transform.rotation.w = marker.pose.pose.orientation.w
+            broadcaster.sendTransform(t)
+            id.append(marker.id)
+    id_list = id
+
+# average the transform between map and odom
+def compute_avg_transform():
+    #print('Computing average transform')
+    global trans_average
+    x_avg = np.mean(np.array([transform.transform.translation.x for transform in queue]))
+    y_avg = np.mean(np.array([transform.transform.translation.y for transform in queue]))
+    z_avg = np.mean(np.array([transform.transform.translation.z for transform in queue]))
+
+    quats = [ (transform.transform.rotation.x, transform.transform.rotation.y, 
+	       transform.transform.rotation.z, transform.transform.rotation.w) for transform in queue]
+    Q = np.transpose(np.array(quats))
+
+    M = np.dot(Q,Q.T)
+
+    w,v = np.linalg.eig(M)
+    vec = v[:,np.argmax(w)]
+
+    mean_quat = normalize(vec)
+
+    tr = TransformStamped()
+    tr.transform.translation.x, tr.transform.translation.y, tr.transform.translation.z = x_avg, y_avg, 0
+    x, y, z, w = mean_quat[0], mean_quat[1], mean_quat[2], mean_quat[3]
+    roll, pitch, yaw = euler_from_quaternion((x, y, z, w))
+    (tr.transform.rotation.x,
+    tr.transform.rotation.y,
+    tr.transform.rotation.z,
+    tr.transform.rotation.w) = quaternion_from_euler(0,0,yaw)
+
+    trans_average = tr
+
+
+def normalize(v):
+	norm = np.linalg.norm(v)
+	if norm == 0 :
+		return v
+	return v / norm
+
+#Find the correct marker in the map and return the transform from map to odom
+def find_marker_transform(id):
+
+    #Name and transform of the detected marker
+    detectedmarker = 'aruco/detected' + str(id)
+    tf_marker_detected = tf_buf.lookup_transform('map', detectedmarker, rospy.Time(0), rospy.Duration(0.5))
+
+    #Iterate over all markers in the world and search for the closest marker
+    distances = [0] * len(world['markers'])
+    for m in range (1, len(distances)+1 ):
+	test_marker = 'aruco/marker' + str(m)
+	tf_marker_test = tf_buf.lookup_transform('map', test_marker, rospy.Time.now(),rospy.Duration(0.5))
+	diff_x = tf_marker_detected.transform.translation.x - tf_marker_test.transform.translation.x
+	diff_y = tf_marker_detected.transform.translation.y - tf_marker_test.transform.translation.y
+	diff_z = tf_marker_detected.transform.translation.z - tf_marker_test.transform.translation.z
+	distances[m-1] = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z
+	print('Distance to marker' + str(m) + ': ' + str(distances[m-1]))
+
+    sorted_marker_ids = [i+1 for i in np.argsort(distances)]
+    markeratmap = 'aruco/marker' + str(sorted_marker_ids[0])
+    distance_diff = abs( math.sqrt(distances[0]) - math.sqrt(distances[1]) )
+    if distance_diff < 0.25:
+	print('Can not decide which marker')
+	tf_buf.lookup_transform('a', 'b', rospy.Time.now())#Generate error to jump in exept
+	
+    print('Detected marker: ' + markeratmap)
+
+    #Calculate transform from map to odom
+    trans1 = tf_buf.lookup_transform('map', markeratmap, rospy.Time.now(), rospy.Duration(0.5))
+    trans2 = tf_buf.lookup_transform(detectedmarker, 'cf1/odom', rospy.Time.now(), rospy.Duration(0.5))
+    trans = multiply_transforms(trans1.transform, trans2.transform)
+
+    return trans
+
+def first_localization(id):
+    #Use the marker ID for the first localization of the drone
+    markeratmap = 'aruco/marker' + str(id)
+    detectedmarker = 'aruco/detected' + str(id)
+    trans1 = tf_buf.lookup_transform('map', markeratmap, rospy.Time.now(), rospy.Duration(0.5))
+    trans2 = tf_buf.lookup_transform(detectedmarker, 'cf1/odom', rospy.Time.now(), rospy.Duration(0.5))
+    trans = multiply_transforms(trans1.transform, trans2.transform)
+    return trans
+
+#Main function
+def main():
+	
+    #Init node, set subscribers and listeners
+    #global trans_average
+    global trans_old
+    global tf_buf
+    rospy.init_node('loc3_sameID')
+    rospy.Subscriber('/aruco/markers', MarkerArray, Callback1)
+    tf_buf = tf2_ros.Buffer()
+    tf_lstn = tf2_ros.TransformListener(tf_buf)
+    rate = rospy.Rate(2)
+    found = False
+
+    #Wait for Buffer to get transforms
+    rospy.sleep(1)
+    
+    while not rospy.is_shutdown():
+	print('----------------------------------------------')
+	#Try to detect and find a marker
+	try:
+	#if 1>0:
+            if id_list:
+		for id in id_list:
+		    if not found:
+			t = first_localization(id)
+			found = True
+			print('Initial localization succesfull')
+		    else:
+			t = find_marker_transform(id)
+                    t.header.stamp = rospy.Time.now()
+                    t.header.frame_id = 'map'
+                    t.child_frame_id = 'cf1/odom'
+
+                    broadcaster.sendTransform(t)
+
+		trans_old = t;
+                print('Transform send')
+
+	except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+	#if 0>1:
+            if found:
+                old_transform = trans_old
+                old_transform.header.stamp = rospy.Time.now()
+                old_transform.header.frame_id = 'map'
+                old_transform.child_frame_id = 'cf1/odom'
+
+                br = tf2_ros.TransformBroadcaster()
+                broadcaster.sendTransform(old_transform)
+		print('Not detecting any marker')
+            pass
+	
+        rate.sleep()
+    rospy.spin()          
+
+if __name__ == "__main__":
+    main()
+
+
