@@ -50,7 +50,7 @@ def find_path(stx,sty,gox,goy):
         py.append(temp)
     px.append(gox)
     py.append(goy)
-    
+    view_path(px,py)
     return px,py
 
 def view_path(pathx,pathy):
@@ -122,7 +122,6 @@ if __name__ == '__main__':
     while not rospy.is_shutdown():
         try:
             px,py = find_path(stx,sty,gox,goy)
-            view_path(px,py)
         except rospy.ROSInterruptException:
             pass
         rate.sleep()

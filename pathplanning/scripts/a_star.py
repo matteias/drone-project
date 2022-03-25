@@ -8,7 +8,7 @@ from mapping import Mapping
 import numpy as np
 import matplotlib.pyplot as plt
 
-show_animation = True
+show_animation = False
 path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal1.world.json"
 
 class AStarPlanner:
@@ -212,9 +212,9 @@ def main():
     end = [.5, 0.5]
 
     grid_size = 2.0  # [m]
-    robot_radius = 1.0  # [m]
+    robot_radius = 0.5  # [m]
     
-    mapp = Mapping(path, 0.02, 3)
+    mapp = Mapping(path, 0.05, 3)
     matrx = mapp.matrix
     range_of_map = matrx.shape
     horizonal = range_of_map[0]
@@ -251,12 +251,16 @@ def main():
     print(mapp.x_conv,mapp.y_conv)
 
     px,py= [],[]
+    px.append(start[0])
+    py.append(start[1])
     for i in rx:
         temp=(i-mapp.x_conv)*mapp.step
         px.append(temp)
     for i in ry:
         temp=(i-mapp.y_conv)*mapp.step
         py.append(temp)
+    px.append(end[0])
+    py.append(end[1])
 
     if show_animation:  # pragma: no cover
         print(px)
