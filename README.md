@@ -12,18 +12,18 @@ rosrun part2 navgoal3
 
 ## Localization
 ```
-rosrun localization static 
+rosrun localization static
 rosrun localization loc3_sameID
 ```
 
 ## Perception
+![45degrees](pose_estimation.png)
 ```
 rosrun perception sign_detection.py
 ```
 
 ## Pathplanning
-animation of path 
+animation of path
 ```
 rosrun Pathplanning a_star.py
 ```
-
