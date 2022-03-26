@@ -17,10 +17,12 @@ rosrun localization loc3_sameID
 ```
 
 ## Perception
-<img src="pose_estimation.png" alt="pose_estimation" width="300"/>
+
 ```
 rosrun perception sign_detection.py
 ```
+
+<img src="pose_estimation.png" alt="pose_estimation" width="300"/>
 
 ## Pathplanning
 animation of path
