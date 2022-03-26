@@ -17,7 +17,7 @@ rosrun localization loc3_sameID
 ```
 
 ## Perception
-![45degrees](pose_estimation.png)
+<img src="drawing.jpg" alt="drawing" width="150"/>
 ```
 rosrun perception sign_detection.py
 ```
