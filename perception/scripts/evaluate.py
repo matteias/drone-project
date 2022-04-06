@@ -224,37 +224,18 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
         return None, None
 
 
-def main():
-    net = network()
-    sift = cv.SIFT_create()
-
-    #ref = preprocess_airport()
-
-    #kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
-
-    image = cv.imread('validation/img_150.jpg')
-    #print(image.shape)
-
-    net.get_bbs(image)
-    net.show_bbs()
-    start, extracted, _, cat = net.bb_params()
-
-    ref_path = 'signs_processed/' + cat + '.jpg'
+def get_pose(extracted, category, sift): # extracted: from camera bb, category: from bounding box
+    ref_path = 'ref_signs/' + cat + '.jpg'
     ref_path = ref_path.replace(' ', '_')
 
     ref = cv.imread(ref_path, cv.IMREAD_GRAYSCALE) # Use category to get reference image
     kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
 
 
-    #extracted = cv.GaussianBlur(extracted,(3,3),cv.BORDER_DEFAULT)
-
     img = cv.cvtColor(extracted,cv.COLOR_BGR2GRAY)
-
     kp2, des2 = sift.detectAndCompute(img, None)
 
-
     src, des = point_corr(kp1, des1, kp2, des2, ref, img) # image keypoints
-
 
     try:
         N = src.shape[0]
@@ -308,7 +289,6 @@ def main():
     #print(rvec)
     #print(tvec)
 
-
     # Visualization
     image = cv.polylines(image,[np.int32(des)],True,(0,255,0),1, cv.LINE_AA)
 
@@ -318,6 +298,30 @@ def main():
 
     if cv.waitKey(0) & 0xff == 27:
         cv.destroyAllWindows()
+
+    return T
+
+def main():
+    net = network()
+    sift = cv.SIFT_create()
+
+    #ref = preprocess_airport()
+
+    #kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
+
+    image = cv.imread('validation/img_150.jpg')
+    #print(image.shape)
+
+    net.get_bbs(image)
+    net.show_bbs()
+    start, extracted, _, cat = net.bb_params()
+
+    T = get_pose(extracted, cat, sift)
+    print(T)
+    #extracted = cv.GaussianBlur(extracted,(3,3),cv.BORDER_DEFAULT)
+
+
+
 
 
 
