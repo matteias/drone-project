@@ -170,7 +170,9 @@ class network():
         size = np.array((height, width)) # width and height wrong?
 
         extracted = im_array[y_start:y_end,x_start:x_end,:]
-        return start, extracted, size
+
+        cat = self.category_dict[b['category']]['name']
+        return start, extracted, size, cat
 
 
 def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points between two sift point lists
@@ -226,15 +228,23 @@ def main():
     net = network()
     sift = cv.SIFT_create()
 
-    ref = preprocess_airport()
+    #ref = preprocess_airport()
 
-    kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
+    #kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
 
-    image = cv.imread('airport/img_20.jpg')
+    image = cv.imread('validation/img_150.jpg')
     #print(image.shape)
 
     net.get_bbs(image)
-    start, extracted, _ = net.bb_params()
+    net.show_bbs()
+    start, extracted, _, cat = net.bb_params()
+
+    ref_path = 'signs_processed/' + cat + '.jpg'
+    ref_path = ref_path.replace(' ', '_')
+
+    ref = cv.imread(ref_path, cv.IMREAD_GRAYSCALE) # Use category to get reference image
+    kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
+
 
     #extracted = cv.GaussianBlur(extracted,(3,3),cv.BORDER_DEFAULT)
 
@@ -246,14 +256,18 @@ def main():
     src, des = point_corr(kp1, des1, kp2, des2, ref, img) # image keypoints
 
 
-    N = src.shape[0]
+    try:
+        N = src.shape[0]
+    except:
+        print('ERROR: homography not found')
+        return
 
     des = np.reshape(des,(N,2)) # image points
     src = np.reshape(src,(N,2)) # object points
     #print(src)
     src = np.flip(src,axis=1)
-    print(src)
-    print(des)
+    #print(src)
+    #print(des)
 
     #print(src.shape)
     #print(des.shape)
@@ -265,7 +279,8 @@ def main():
     x0 = hp/2
     y0 = wp/2
 
-    p_size = 0.123/hp # pixel size in meters
+    #p_size = 0.123/hp # pixel size in meters [airport]
+    p_size = 0.15/wp
 
     #print()
 
@@ -280,31 +295,22 @@ def main():
     mtx = np.load('mtx.npy')
     dist = np.load('dist.npy')
 
+    # Solve Perspective-n-Point for corners
     succ, rvec, tvec = cv.solvePnP(src, des, mtx, dist)
 
-
+    # Transformation matrix
     R, _ = cv.Rodrigues(rvec)
-
-    #print(tvec)
     T = np.concatenate((R,tvec),axis = 1)
-
     temp = np.array([0,0,0,1])
     temp = np.reshape(temp,(1,4))
-
     T = np.concatenate((T,temp), axis = 0)
-    print(rvec)
-    print(tvec)
 
-    #rvec = rvec+np.array([np.pi,0,0])
-    #T_inv = np.linalg.inv(T)
-    #print(T_inv)
-
-    #print(T_inv[0:3,0:3])
-    #print(T_inv[0:3,3])
-    #rvec2, _ = cv.Rodrigues(T_inv[0:3,0:3])
-    #tvec2 = T_inv[0:3,3]
+    #print(rvec)
+    #print(tvec)
 
 
+    # Visualization
+    image = cv.polylines(image,[np.int32(des)],True,(0,255,0),1, cv.LINE_AA)
 
     cv.aruco.drawAxis(image, mtx, dist, rvec, tvec, 0.2)
 
@@ -343,6 +349,7 @@ def preprocess_airport():
     #cv.imshow('Blurred', np.hstack((airport,blurred)))
 
     img = cv.cvtColor(blurred,cv.COLOR_BGR2GRAY)
+    cv.imwrite('airport_cropped.jpg', img)
 
     show_image = False
     if show_image:
@@ -356,6 +363,9 @@ def preprocess_airport():
     return img
 
 
+
+#NOTES: USE MEASUREMENT IF WE GET THE SAME CALSS MULTIPLE TIMES
+#USE INFOERMATION FROM LOCALIZATION? -> compensate for motion?
 
 
 def grab_based():
