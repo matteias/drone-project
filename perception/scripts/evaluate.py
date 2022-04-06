@@ -224,8 +224,8 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
         return None, None
 
 
-def get_pose(extracted, category, sift): # extracted: from camera bb, category: from bounding box
-    ref_path = 'ref_signs/' + cat + '.jpg'
+def get_pose(extracted, cat, sift, start): # extracted: from camera bb, category: from bounding box
+    ref_path = 'ref_signs/p' + cat + '.jpg'
     ref_path = ref_path.replace(' ', '_')
 
     ref = cv.imread(ref_path, cv.IMREAD_GRAYSCALE) # Use category to get reference image
@@ -290,16 +290,9 @@ def get_pose(extracted, category, sift): # extracted: from camera bb, category: 
     #print(tvec)
 
     # Visualization
-    image = cv.polylines(image,[np.int32(des)],True,(0,255,0),1, cv.LINE_AA)
 
-    cv.aruco.drawAxis(image, mtx, dist, rvec, tvec, 0.2)
 
-    cv.imshow('overlayed', image)
-
-    if cv.waitKey(0) & 0xff == 27:
-        cv.destroyAllWindows()
-
-    return T
+    return rvec, tvec, des
 
 def main():
     net = network()
@@ -316,8 +309,20 @@ def main():
     net.show_bbs()
     start, extracted, _, cat = net.bb_params()
 
-    T = get_pose(extracted, cat, sift)
-    print(T)
+    rvec, tvec, des = get_pose(extracted, cat, sift, start)
+
+    # FOR PYTHON PLOTTING
+    image = cv.polylines(image,[np.int32(des)],True,(0,255,0),1, cv.LINE_AA)
+
+    mtx = np.load('mtx.npy')
+    dist = np.load('dist.npy')
+
+    cv.aruco.drawAxis(image, mtx, dist, rvec, tvec, 0.2)
+
+    cv.imshow('overlayed', image)
+
+    if cv.waitKey(0) & 0xff == 27:
+        cv.destroyAllWindows()
     #extracted = cv.GaussianBlur(extracted,(3,3),cv.BORDER_DEFAULT)
 
 
