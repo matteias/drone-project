@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.7
 from __future__ import print_function
 
 import argparse
@@ -7,9 +7,9 @@ import os
 
 import torch
 from torch import nn
-from torchvision.datasets import CocoDetection
-import torchvision.transforms.functional as TF
-from PIL import Image
+#from torchvision.datasets import CocoDetection
+#import torchvision.transforms.functional as TF
+#from PIL import Image
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -147,32 +147,37 @@ class network():
             plt.show()
 
     def bb_params(self):
-        b = self.bbs[0][0]
+        detected = False
+        if len(self.bbs) > 0 and len(self.bbs[0]) > 0:
+            detected = True
+            b = self.bbs[0][0]
 
-        im_array = np.array(self.image)
-        x_start = int(b["x"])
-        y_start = int(b["y"])
+            im_array = np.array(self.image)
+            x_start = int(b["x"])
+            y_start = int(b["y"])
 
-        width = int(b["width"])
-        height = int(b["height"])
-        pad = int(2)
-        x_end = x_start + width
-        y_end = y_start + height
+            width = int(b["width"])
+            height = int(b["height"])
+            pad = int(2)
+            x_end = x_start + width
+            y_end = y_start + height
 
-        h = im_array.shape[0]
-        w = im_array.shape[1]
-        x_start = max(pad,min(w-pad,x_start))
-        x_end = max(pad,min(w-pad,x_end))
-        y_start = max(pad,min(h-pad,y_start))
-        y_end = max(pad,min(h-pad,y_end))
+            h = im_array.shape[0]
+            w = im_array.shape[1]
+            x_start = max(pad,min(w-pad,x_start))
+            x_end = max(pad,min(w-pad,x_end))
+            y_start = max(pad,min(h-pad,y_start))
+            y_end = max(pad,min(h-pad,y_end))
 
-        start = np.array((x_start, y_start))
-        size = np.array((height, width)) # width and height wrong?
+            start = np.array((x_start, y_start))
+            size = np.array((height, width)) # width and height wrong?
 
-        extracted = im_array[y_start:y_end,x_start:x_end,:]
+            extracted = im_array[y_start:y_end,x_start:x_end,:]
 
-        cat = self.category_dict[b['category']]['name']
-        return start, extracted, size, cat
+            cat = self.category_dict[b['category']]['name']
+            return start, extracted, detected, cat, b['category']
+        return None, None, detected, None, None
+
 
 
 def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points between two sift point lists
@@ -202,13 +207,16 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
         matchesMask = mask.ravel().tolist()
         h,w = img1.shape
         pts = np.float32([ [0,0],[0,h-1],[w-1,h-1],[w-1,0] ]).reshape(-1,1,2)
-        dst = cv.perspectiveTransform(pts,M)
-        img2 = cv.polylines(img2,[np.int32(dst)],True,255,1, cv.LINE_AA)
+        try:
+            dst = cv.perspectiveTransform(pts,M)
+        except:
+            return None, None
+        #img2 = cv.polylines(img2,[np.int32(dst)],True,255,1, cv.LINE_AA)
     else:
-        print( "Not enough matches are found - {}/{}".format(len(good), MIN_MATCH_COUNT) )
+        #print( "Not enough matches are found - {}/{}".format(len(good), MIN_MATCH_COUNT) )
         matchesMask = None
 
-    show_plot = True
+    show_plot = False
 
     if show_plot:
         draw_params = dict(matchColor = (0,255,0), # draw matches in green color
@@ -231,8 +239,10 @@ def get_pose(extracted, cat, sift, start): # extracted: from camera bb, category
     ref = cv.imread(ref_path, cv.IMREAD_GRAYSCALE) # Use category to get reference image
     kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
 
-
-    img = cv.cvtColor(extracted,cv.COLOR_BGR2GRAY)
+    try:
+        img = cv.cvtColor(extracted,cv.COLOR_BGR2GRAY)
+    except:
+        return None, None
     kp2, des2 = sift.detectAndCompute(img, None)
 
     src, des = point_corr(kp1, des1, kp2, des2, ref, img) # image keypoints
@@ -240,8 +250,8 @@ def get_pose(extracted, cat, sift, start): # extracted: from camera bb, category
     try:
         N = src.shape[0]
     except:
-        print('ERROR: homography not found')
-        return
+        #print('ERROR: homography not found')
+        return None, None
 
     des = np.reshape(des,(N,2)) # image points
     src = np.reshape(src,(N,2)) # object points
@@ -261,7 +271,7 @@ def get_pose(extracted, cat, sift, start): # extracted: from camera bb, category
     y0 = wp/2
 
     #p_size = 0.123/hp # pixel size in meters [airport]
-    p_size = 0.15/wp
+    p_size = 0.125/wp
 
     #print()
 
@@ -292,7 +302,7 @@ def get_pose(extracted, cat, sift, start): # extracted: from camera bb, category
     # Visualization
 
 
-    return rvec, tvec, des
+    return rvec, tvec
 
 def main():
     net = network()
@@ -306,129 +316,27 @@ def main():
     #print(image.shape)
 
     net.get_bbs(image)
-    net.show_bbs()
+    #net.show_bbs()
     start, extracted, _, cat = net.bb_params()
 
-    rvec, tvec, des = get_pose(extracted, cat, sift, start)
+    rvec, tvec = get_pose(extracted, cat, sift, start)
+    print(rvec)
+    print(tvec)
 
     # FOR PYTHON PLOTTING
-    image = cv.polylines(image,[np.int32(des)],True,(0,255,0),1, cv.LINE_AA)
+    #image = cv.polylines(image,[np.int32(des)],True,(0,255,0),1, cv.LINE_AA)
 
-    mtx = np.load('mtx.npy')
-    dist = np.load('dist.npy')
+    #mtx = np.load('mtx.npy')
+    #dist = np.load('dist.npy')
 
-    cv.aruco.drawAxis(image, mtx, dist, rvec, tvec, 0.2)
+    #cv.aruco.drawAxis(image, mtx, dist, rvec, tvec, 0.2)
 
-    cv.imshow('overlayed', image)
+    #cv.imshow('overlayed', image)
 
-    if cv.waitKey(0) & 0xff == 27:
-        cv.destroyAllWindows()
+    #if cv.waitKey(0) & 0xff == 27:
+    #    cv.destroyAllWindows()
     #extracted = cv.GaussianBlur(extracted,(3,3),cv.BORDER_DEFAULT)
 
-
-
-
-
-
-
-def preprocess_airport():
-    w = 1132
-    h = 726
-    ys = 29
-    xs = 478
-
-    airport = cv.imread('airport2.jpg')
-    airport = airport[xs:xs+h,ys:ys+w,:]
-
-    #cv.imshow('reference image', airport)
-
-
-
-    scale_percent = 25
-    width = int(airport.shape[1] * scale_percent / 100)
-    height = int(airport.shape[0] * scale_percent / 100)
-
-    airport = cv.resize(airport, (width,height), interpolation = cv.INTER_AREA)
-
-    y0 = int(width/2)
-    x0 = int(height/2)
-
-    blurred = cv.GaussianBlur(airport,(3,3),cv.BORDER_DEFAULT)
-
-    #cv.imshow('Blurred', np.hstack((airport,blurred)))
-
-    img = cv.cvtColor(blurred,cv.COLOR_BGR2GRAY)
-    cv.imwrite('airport_cropped.jpg', img)
-
-    show_image = False
-    if show_image:
-
-        cv.imshow('gray',img)
-        print(img.shape)
-
-        if cv.waitKey(0) & 0xff == 27:
-            cv.destroyAllWindows()
-
-    return img
-
-
-
-#NOTES: USE MEASUREMENT IF WE GET THE SAME CALSS MULTIPLE TIMES
-#USE INFOERMATION FROM LOCALIZATION? -> compensate for motion?
-
-
-def grab_based():
-    img = cv.imread('airport/img_21.jpg')
-
-
-    net = network()
-    net.get_bbs(img)
-    start, extracted, size = net.bb_params()
-
-
-    mask = np.zeros(img.shape[:2],np.uint8)
-
-    bgdModel = np.zeros((1,65),np.float64)
-    fgdModel = np.zeros((1,65),np.float64)
-
-    rect = (start[0],start[1],size[1],size[0])
-    cv.grabCut(img,mask,rect,bgdModel,fgdModel,10,cv.GC_INIT_WITH_RECT)
-    mask2 = np.where((mask==2)|(mask==0),0,1).astype('uint8')
-
-
-    img = img*mask2[:,:,np.newaxis]
-
-    #img = harris(img)
-
-    cv.imshow('grabcut',img)
-
-    if cv.waitKey(0) & 0xff == 27:
-        cv.destroyAllWindows()
-
-
-
-    #plt.imshow(img),plt.colorbar(),plt.show()
-
-def harris(img):
-    gray = cv.cvtColor(img,cv.COLOR_BGR2GRAY)
-    # find Harris corners
-    gray = np.float32(gray)
-    dst = cv.cornerHarris(gray,2,3,0.04)
-    dst = cv.dilate(dst,None)
-    ret, dst = cv.threshold(dst,0.01*dst.max(),255,0)
-    dst = np.uint8(dst)
-    # find centroids
-    ret, labels, stats, centroids = cv.connectedComponentsWithStats(dst)
-    # define the criteria to stop and refine the corners
-    criteria = (cv.TERM_CRITERIA_EPS + cv.TERM_CRITERIA_MAX_ITER, 100, 0.001)
-    corners = cv.cornerSubPix(gray,np.float32(centroids),(5,5),(-1,-1),criteria)
-    # Now draw them
-    res = np.hstack((centroids,corners))
-    res = np.int0(res)
-    img[res[:,1],res[:,0]]=[0,0,255]
-    img[res[:,3],res[:,2]] = [0,255,0]
-
-    return img
 
 
 if __name__ == '__main__':
