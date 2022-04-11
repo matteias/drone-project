@@ -17,9 +17,10 @@ rosrun localization loc3_sameID
 ```
 
 ## Perception
+dependecies: PyTorch (python3)
 
 ```
-rosrun perception sign_detection.py
+rosrun perception perception.py
 ```
 
 <img src="pose_estimation.png" alt="pose_estimation" width="300"/>
