@@ -317,7 +317,7 @@ def main():
 
     net.get_bbs(image)
     #net.show_bbs()
-    start, extracted, _, cat = net.bb_params()
+    start, extracted, _, cat, cat_id = net.bb_params()
 
     rvec, tvec = get_pose(extracted, cat, sift, start)
     print(rvec)

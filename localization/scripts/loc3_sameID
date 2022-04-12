@@ -167,7 +167,8 @@ def main():
     global trans_old
     global tf_buf
     rospy.init_node('loc3_sameID')
-    rospy.Subscriber('/aruco/markers', MarkerArray, Callback1)
+    #rospy.Subscriber('/aruco/markers', MarkerArray, Callback1)
+    rospy.Subscriber('/perception/sign_pose', MarkerArray, Callback1)
     tf_buf = tf2_ros.Buffer()
     tf_lstn = tf2_ros.TransformListener(tf_buf)
     rate = rospy.Rate(2)

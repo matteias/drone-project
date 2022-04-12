@@ -31,7 +31,7 @@ def send_marker_transform(msg):
     for marker in msg.markers:
         t = TransformStamped()
         t.header.stamp = marker.header.stamp
-        if marker.id != 0:
+        if True:
             t.header.frame_id = 'cf1/camera_link'
             t.child_frame_id = 'perception/detected'+str(marker.id)
             t.transform.translation.x = marker.pose.pose.position.x
