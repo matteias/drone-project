@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<launch>
+  <include file="$(find dd2419_launch)/launch/base.launch">
+    <arg name="ch" value="96"/>  
+  </include>
+
+  <include file="$(find dd2419_launch)/launch/world_publisher.launch">
+    <arg name="world_publisher" value="saal3"/>  
+  </include>
+
+  <node name="navgoal3" pkg="flight_camp"  type="navgoal3" />
+  <node pkg="tf2_ros" type="static_transform_publisher" name="cam_to_drone" args="0.01 0 0.02 -1.57 0 -1.57 cf1/base_link camera_link" />
+  <node name="perception" pkg="perception"  type="perception.py" />
+  <node name="trainsforms" pkg="perception"  type="trainsforms.py" />
+</launch>
