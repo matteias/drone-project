@@ -24,6 +24,7 @@ dependecies: PyTorch (python3)
 
 ```
 rosrun perception perception.py
+rosrun perception trainsforms.py
 rosrun perception intruder.py
 ```
 
