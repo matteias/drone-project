@@ -24,7 +24,12 @@ dependecies: PyTorch (python3)
 
 ```
 rosrun perception perception.py
+rosrun perception trainsforms.py
+rosrun perception intruder.py
 ```
+Perception runs sign detection and publishes detected markers as markerarrays.
+Trainsforms publishes detected signs as transforms /perception/detectedX
+and signs from the map as /perception/signX.
 
 <img src="pose_estimation.png" alt="pose_estimation" width="300"/>
 
