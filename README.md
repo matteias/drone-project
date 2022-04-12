@@ -1,6 +1,9 @@
 # Drone Project
 Execute these commands to run the whole integrated system
 
+to find camera: 
+cvlc v4l2:///dev/v4l/by-id/usb-ARKMICRO_USB2.0_PC_CAMERA-video-index0 :live-caching=25
+
 ## Brain
 ```
 roslaunch dd2419_launch base.launch ch:=96
