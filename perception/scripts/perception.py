@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.7
 from evaluate import *
 import rospy
 from sensor_msgs.msg import Image
@@ -84,37 +84,6 @@ def makePoseWithCovariance(rvec,tvec,cat_id):
 #def makeMarkerArray(bbs):
 #    pass
 
-'''
-def transform_from_marker(m):
-    t = TransformStamped()
-    t.header = m.header
-
-    t.child_frame_id = 'perception/sign' + str(m['id'])
-    t.transform.translation = m.pose.pose.position
-    t.transform.rotation.x = m.pose.pose.orientation.x
-    t.transform.rotation.y = m.pose.pose.orientation.y
-    t.transform.rotation.z = m.pose.pose.orientation.z
-    t.transform.rotation.w = m.pose.pose.orientation.w
-
-    return t
-    '''
-'''
-def send_marker_transform(markerarray):
-    for marker in msg.markers:
-        t = TransformStamped()
-        t.header.stamp = marker.header.stamp
-        if marker.id != 0:
-            t.header.frame_id = 'cf1/camera_link'
-            t.child_frame_id = 'sign/detected'+str(marker.id)
-            t.transform.translation.x = marker.pose.pose.position.x
-            t.transform.translation.y = marker.pose.pose.position.y
-            t.transform.translation.z = marker.pose.pose.position.z
-            t.transform.rotation.x = marker.pose.pose.orientation.x
-            t.transform.rotation.y = marker.pose.pose.orientation.y
-            t.transform.rotation.z = marker.pose.pose.orientation.z
-            t.transform.rotation.w = marker.pose.pose.orientation.w
-            broadcaster.sendTransform(t)
-'''
 
 
 rospy.init_node('bb_publisher')
