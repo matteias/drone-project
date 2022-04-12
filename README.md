@@ -24,6 +24,7 @@ dependecies: PyTorch (python3)
 
 ```
 rosrun perception perception.py
+rosrun perception intruder.py
 ```
 
 <img src="pose_estimation.png" alt="pose_estimation" width="300"/>
