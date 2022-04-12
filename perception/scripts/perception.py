@@ -98,12 +98,30 @@ def transform_from_marker(m):
 
     return t
     '''
+def send_marker_transform(markerarray):
+    for marker in msg.markers:
+        t = TransformStamped()
+        t.header.stamp = marker.header.stamp
+        if marker.id != 0:
+            t.header.frame_id = 'cf1/camera_link'
+            t.child_frame_id = 'sign/detected'+str(marker.id)
+            t.transform.translation.x = marker.pose.pose.position.x
+            t.transform.translation.y = marker.pose.pose.position.y
+            t.transform.translation.z = marker.pose.pose.position.z
+            t.transform.rotation.x = marker.pose.pose.orientation.x
+            t.transform.rotation.y = marker.pose.pose.orientation.y
+            t.transform.rotation.z = marker.pose.pose.orientation.z
+            t.transform.rotation.w = marker.pose.pose.orientation.w
+            broadcaster.sendTransform(t)
 
 
 rospy.init_node('bb_publisher')
 img_sub = rospy.Subscriber('/cf1/camera/image_raw', Image, image_callback)
 bb_pub = rospy.Publisher('/perception/image', Image, queue_size=2)
 pose_pubby = rospy.Publisher('/perception/sign_pose', MarkerArray,queue_size=3)
+broadcaster = tf2_ros.TransformBroadcaster()
+
+
 if __name__== "__main__":
     net = network()
     sift = cv.SIFT_create()
