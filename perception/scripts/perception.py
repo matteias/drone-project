@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3
 from evaluate import *
 import rospy
 from sensor_msgs.msg import Image
@@ -8,7 +8,7 @@ import cv2 as cv
 #from tf.transformations import quaternion_about_axis
 from aruco_msgs.msg import MarkerArray, Marker
 from geometry_msgs.msg import Pose, PoseWithCovariance, Point, Quaternion, TransformStamped
-
+#import tf2_ros
 
 image = None
 def image_callback(msg):
@@ -98,6 +98,7 @@ def transform_from_marker(m):
 
     return t
     '''
+'''
 def send_marker_transform(markerarray):
     for marker in msg.markers:
         t = TransformStamped()
@@ -113,13 +114,14 @@ def send_marker_transform(markerarray):
             t.transform.rotation.z = marker.pose.pose.orientation.z
             t.transform.rotation.w = marker.pose.pose.orientation.w
             broadcaster.sendTransform(t)
+'''
 
 
 rospy.init_node('bb_publisher')
 img_sub = rospy.Subscriber('/cf1/camera/image_raw', Image, image_callback)
 bb_pub = rospy.Publisher('/perception/image', Image, queue_size=2)
 pose_pubby = rospy.Publisher('/perception/sign_pose', MarkerArray,queue_size=3)
-broadcaster = tf2_ros.TransformBroadcaster()
+
 
 
 if __name__== "__main__":
