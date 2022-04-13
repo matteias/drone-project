@@ -249,11 +249,11 @@ def main():
     # start = [0.5, -0.5]
     # end = [3, -2]
     # saal4
-    start = [0.5, 0.5]
-    end = [0.5, 2.2]
+    start = [0.7, 0.7]
+    end = [0.7, 2.1]
 
     t0=time.time()
-    grid_size = 1.8  # configure it to needs
+    grid_size = 2.0  # configure it to needs
     robot_radius = 0.5  # drone radius
     
     mapp = Mapping(path, 0.1, 2)

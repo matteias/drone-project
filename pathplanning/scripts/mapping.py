@@ -27,8 +27,8 @@ class Mapping:
 
         with open(self.jfile) as jfile:
             self.map_data = json.load(jfile)
-            map_end, map_start = self.airspace() # map_end map_start is the max and min of airspaces, where map starts and ends
-            air_end, air_start = self.airspace()
+            map_start, map_end = self.airspace() # map_end map_start is the max and min of airspaces, where map starts and ends
+            air_start, air_end = self.airspace()
             if expansion > 0:
                 map_start, map_end = self.expand(map_start, map_end, expansion) # need fixing
             
@@ -37,14 +37,13 @@ class Mapping:
             # x_matrix = x/step_size - x_conv
             self.x_conv = (map_start[0])/step_size
             self.y_conv = (map_start[1])/step_size
-            # ms = [map_start[0]+self.x_conv, map_start[1]+self.y_conv]
-            # me = [map_end[0]+self.x_conv, map_end[1]+self.y_conv]
+
             self.matrix = self.clean_map(map_start, map_end, 0, self.step)
 
-            self.matrix[:,0:inflation] = 1
-            self.matrix[:,-inflation:] = 1
-            self.matrix[0:inflation,:] = 1
-            self.matrix[-inflation:,:] = 1
+            self.matrix[:, 0:inflation] = 1
+            self.matrix[:, -inflation:] = 1
+            self.matrix[0:inflation, :] = 1
+            self.matrix[-inflation:, :] = 1
             for wall in self.map_data["walls"]:
                 wall_start = wall["plane"]["start"]
                 wall_stop = wall["plane"]["stop"]
@@ -59,10 +58,10 @@ class Mapping:
         # Extracting the boundries for the airspace
         max_coords = self.map_data["airspace"]["max"]
         min_coords = self.map_data["airspace"]["min"]
-        return max_coords, min_coords
+        return min_coords, max_coords
 
     def expand(self, start, end, exp):
-        exp_start = (start[1] + exp, start[0] + exp)
+        exp_start = (start[1] - exp, start[0] - exp)
         exp_end = (end[1] + exp, end[0] + exp)
         return exp_start, exp_end
 
@@ -100,9 +99,9 @@ class Mapping:
     def clean_map(self, start, end, expansion, step_size):
         # Generating a zero matrix for the entire map + some extending it a bit
         # since markers could be outside the airspace
-        x = (end[0] - start[0] + expansion)/step_size
-        y = (end[1] - start[1] + expansion)/step_size
-        map_matrix = np.zeros((int(x), int(y)))
+        x = (end[0] - start[0] + expansion)/step_size + 1
+        y = (end[1] - start[1] + expansion)/step_size + 1
+        map_matrix = np.zeros((int(y), int(x)))
         return map_matrix
        
     def inflate_walls(self, xidx, yidx):
@@ -113,11 +112,11 @@ class Mapping:
         xmax = xidx + self.infl
         ymin = yidx - self.infl
         ymax = yidx + self.infl
-        xmin = max(0,xmin)
-        ymin = max(0,ymin)
-        xmax = min(self.matrix.shape[0],xmax)
-        ymax = min(self.matrix.shape[1],ymax) 
-        self.matrix[xmin:xmax,ymin:ymax] = 1
+        xmin = max(0, xmin)
+        ymin = max(0, ymin)
+        xmax = min(self.matrix.shape[0], xmax)
+        ymax = min(self.matrix.shape[1], ymax) 
+        self.matrix[ymin:ymax, xmin:xmax] = 1
         
     
     def line(self, start, end):
@@ -174,10 +173,10 @@ class Mapping:
         # points is the real coordinates divided by stepsize
         for p in points:
 
-            xidx = -self.x_conv + p[0]
-            yidx = -self.y_conv + p[1]
+            xidx = p[0] - self.x_conv
+            yidx = p[1] - self.y_conv
             
-            p_shift = (min(int(xidx), self.matrix.shape[0]-1), min(int(yidx), self.matrix.shape[1]-1))
+            p_shift = (min(int(yidx), self.matrix.shape[1]-1), min(int(xidx), self.matrix.shape[0]-1))
             if self.PixelIsInsideMap(p_shift):
                 if wall == True:
                     self.matrix[p_shift] = 1
@@ -187,7 +186,7 @@ class Mapping:
                 elif roadsign == True:
                     self.matrix[p_shift] = 5
             else:
-                print("Trying to place something outside map at: " +str(p_shift))
+                print("Trying to place something outside map at: " + str(p_shift))
 
     
     #def wall_values(self):

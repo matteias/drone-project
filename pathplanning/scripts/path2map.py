@@ -20,10 +20,7 @@ def find_path(start, end, path_world):
     
     mapp = Mapping(path_world, 0.1, 2)
     matrx = mapp.matrix
-    # range_of_map = matrx.shape
-    # horizonal = range_of_map[0]
-    # vertical = range_of_map[1]
-    # set obstable positions
+
     matrx_indx = np.nonzero(matrx == 1) # represent the walls
     oy = matrx_indx[0].tolist()
     ox = matrx_indx[1].tolist()
