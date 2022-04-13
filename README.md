@@ -7,8 +7,12 @@ cvlc v4l2:///dev/v4l/by-id/usb-ARKMICRO_USB2.0_PC_CAMERA-video-index0 :live-cach
 '''
 
 the whole system:
+run perception and localization node seperately
 '''
 roslaunch brain ms3.launch
+roscd perception/scripts
+rosrun perception perception.py
+rosrun localization loc4_signs
 '''
 
 ## Brain
