@@ -6,7 +6,7 @@ from geometry_msgs.msg import Pose, PoseWithCovariance, Point, Quaternion, Trans
 import tf2_ros
 from tf.transformations import quaternion_from_euler
 import math
-
+#rosrun tf2_ros static_transform_publisher 0.01 0 0.02 -1.57 0 -1.57 cf1/base_link cf1/camera_link
 
 sign_dict = {
     "no_bicycle": 0,
@@ -41,7 +41,7 @@ def send_marker_transform(msg):
             t.transform.rotation.y = marker.pose.pose.orientation.y
             t.transform.rotation.z = marker.pose.pose.orientation.z
             t.transform.rotation.w = marker.pose.pose.orientation.w
-            broadcaster.sendTransform(t)
+            #broadcaster.sendTransform(t)
 
 # static transform for roadsigns in map
 def transform_from_sign(m):
@@ -67,7 +67,7 @@ broadcaster = tf2_ros.TransformBroadcaster()
 
 
 # Load world JSON
-with open('/home/matte/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/tutorial_1.world.json') as f:
+with open('/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal3.world.json') as f:
         world = json.load(f)
 
 transforms = [transform_from_sign(m) for m in world[u'roadsigns']]
