@@ -86,7 +86,7 @@ def makePoseWithCovariance(rvec,tvec,cat_id):
 
 
 
-rospy.init_node('bb_publisher')
+rospy.init_node('perception')
 img_sub = rospy.Subscriber('/cf1/camera/image_raw', Image, image_callback)
 bb_pub = rospy.Publisher('/perception/image', Image, queue_size=2)
 pose_pubby = rospy.Publisher('/perception/sign_pose', MarkerArray,queue_size=3)
