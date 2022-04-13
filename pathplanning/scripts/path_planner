@@ -8,16 +8,15 @@ from path2map import *
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 
-path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal1.world.json"
+path_world = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal3.world.json"
 
-def exe_path(stx,sty,gox,goy):
+def exe_path(start,end):
     '''
-    stx,sty: start point on map
-    gox,goy: goal point on map
+    start: start point on map
+    end: goal point on map
     '''
-    pathx,pathy = find_path(stx,sty,gox,goy)
-
-    pathz = [0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4]
+    pathx,pathy = find_path(start, end, path_world)
+    
     pathyaw = [0]*11
     cmd = Position()
     cmd.header.stamp = rospy.Time.now()
@@ -26,17 +25,16 @@ def exe_path(stx,sty,gox,goy):
     pub = rospy.Publisher('/cf1/cmd_position', Position, queue_size=2)
 
 
+
 rospy.init_node('path_planner', anonymous=True)
 rate = rospy.Rate(10)
 
 if __name__ == '__main__':
-    stx=0.5
-    sty=2.5
-    gox=0.5
-    goy=0.5
+    start = [0.3, 0.15]
+    end = [1.1, 0.15]
     while not rospy.is_shutdown():
         try:
-            px,py = find_path(stx,sty,gox,goy)
+            px,py = exe_path(start,end)
         except rospy.ROSInterruptException:
             pass
         rate.sleep()
