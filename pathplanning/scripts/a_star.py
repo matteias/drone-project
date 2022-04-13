@@ -10,17 +10,17 @@ import matplotlib.pyplot as plt
 import time
 
 show_animation = True
-path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal3.world.json"
+path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal4.world.json"
 
 class AStarPlanner:
 
     def __init__(self, ox, oy, reso, rr):
         """
         Initialize grid map for a star planning
-        ox: x position list of Obstacles [m]
-        oy: y position list of Obstacles [m]
-        reso: grid resolution [m]
-        rr: robot radius[m]
+        ox: x position list of Obstacles [matrix m]
+        oy: y position list of Obstacles [matrix m]
+        reso: grid resolution 
+        rr: robot radius
         """
 
         self.reso = reso
@@ -127,17 +127,6 @@ class AStarPlanner:
             ry.append(self.calc_grid_position(n.y, self.miny))
             pind = n.pind
 
-        # rx_filtered = []
-        # ry_filtered = []
-        # for i in range(rx):
-        #     dy1 = ry[i+1] - ry[i]
-        #     dx1 = rx[i+1] - ry[i]
-        #     dy2 = ry[i+2] - ry[i+1]
-        #     dx2 = rx[i+2] - ry[i+1] 
-
-        #     if (dy1/dx1 != dy2/dy2):
-        #         rx_filtered.append(rx[i+1])
-        #         ry_filtered.append(ry[i+1])
         return rx, ry, 
 
     @staticmethod
@@ -217,24 +206,60 @@ class AStarPlanner:
 
         return motion
 
+    #Ok, we can discuss it on zoom after the meeting., 
+    # I will go for lunch now, see u then
+def path_points(mapp, start, end, rx, ry):
+    # start and end is the user input on map frame, which are start point and goal
+    # rx, ry is the route on the matrix
+    # px, py is the route on the map
+    # pathx, pathy is the path for drone to fly
+
+    px,py= [],[]
+    px.append(start[0])
+    py.append(start[1])
+    for routex in rx:
+        real=(routex + mapp.x_conv) * mapp.step
+        px.append(real)
+    for routey in ry:
+        real=(routey + mapp.y_conv) * mapp.step
+        py.append(real)
+    px.append(end[0])
+    py.append(end[1])
+    # pathx,pathy = [], []
+    # rx_filtered = []
+    # ry_filtered = []
+    # for i in range(rx):
+    #     dy1 = ry[i+1] - ry[i]
+    #     dx1 = rx[i+1] - ry[i]
+    #     dy2 = ry[i+2] - ry[i+1]
+    #     dx2 = rx[i+2] - ry[i+1] 
+
+    #     if (dy1/dx1 != dy2/dy2):
+    #         rx_filtered.append(rx[i+1])
+    #         ry_filtered.append(ry[i+1])
+
+    return px, py
 
 def main():
-    # print("start!!")
-    start = [0.1, -1.25]
-    end = [3, -1.25]
+    print("start!!")
+    # saal3
+    # start = [0.3, 0.15]
+    # end = [1.1, 0.15]
+    # flight trial
+    # start = [0.5, -0.5]
+    # end = [3, -2]
+    # saal4
+    start = [0.5, 0.5]
+    end = [0.5, 2.2]
+
     t0=time.time()
-    grid_size = 1.5  # configure it to needs
+    grid_size = 1.8  # configure it to needs
     robot_radius = 0.5  # drone radius
     
     mapp = Mapping(path, 0.1, 2)
     matrx = mapp.matrix
-    # range_of_map = matrx.shape
-    # horizonal = range_of_map[0]
-    # vertical = range_of_map[1]
-    # print(mapp.step)
-    
-    #npmatrx = np.array()
-    # print(matrx.shape)
+
+    # npmatrx = np.array()
     # print(horizonal)
     # print(vertical)
 
@@ -242,21 +267,27 @@ def main():
     matrx_indx = np.nonzero(matrx == 1) # represent the walls
     oy = matrx_indx[0].tolist()
     ox = matrx_indx[1].tolist()
+
+    # range_of_map = matrx.shape
+    # horizonal = range_of_map[0]
+    # vertical = range_of_map[1]
+    # oy_old = matrx_indx[0].tolist()
+    # ox_old = matrx_indx[1].tolist()
     # oy = [vertical-i for i in oy_old]
     # ox = [horizonal-i for i in ox_old]
 
     # start and goal position
-    # sx = (start[0]/mapp.step) + mapp.x_conv   # [m]
-    # sy = (start[1]/mapp.step) + mapp.y_conv  # [m]
-    # gx = (end[0]/mapp.step) + mapp.x_conv  # [m]
-    # gy = (end[1]/mapp.step) + mapp.y_conv # [m]
+    sx = (start[0]/mapp.step) - mapp.x_conv # [matrix]
+    sy = (start[1]/mapp.step) - mapp.y_conv  # [matrix]
+    gx = (end[0]/mapp.step) - mapp.x_conv # [matrix]
+    gy = (end[1]/mapp.step) - mapp.y_conv # [matrix]
     
-    sx=2
-    sy=3
-    gx=2
-    gy=10
-    print(mapp.x_conv,mapp.y_conv)
-    print(sx,sy,gx,gy)
+    # sx=3
+    # sy=2
+    # gx=10
+    # gy=2
+    # print(mapp.x_conv,mapp.y_conv)
+    print("startpoint and endpoint:", sx,sy,gx,gy)
     # print(sx,sy,gx,gy)
 
     if show_animation:  # pragma: no cover
@@ -272,21 +303,12 @@ def main():
     ry.reverse()
     # print(mapp.x_conv,mapp.y_conv)
     
-    px,py= [],[]
-    px.append(start[0])
-    py.append(start[1])
-    for i in rx:
-        temp=(-i+mapp.x_conv)*mapp.step
-        px.append(temp)
-    for i in ry:
-        temp=(-i+mapp.y_conv)*mapp.step
-        py.append(temp)
-    px.append(end[0])
-    py.append(end[1])
+    px,py=path_points(mapp,start,end,rx,ry)
+
 
     t1=time.time()
     total=t1-t3
-    print(total)
+    print("total time", total)
 
     if show_animation:  # pragma: no cover
         print(px)
