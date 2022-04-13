@@ -7,9 +7,10 @@ import math
 from mapping import Mapping
 import numpy as np
 import matplotlib.pyplot as plt
+import time
 
-show_animation = False
-path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal1.world.json"
+show_animation = True
+path = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal3.world.json"
 
 class AStarPlanner:
 
@@ -126,7 +127,18 @@ class AStarPlanner:
             ry.append(self.calc_grid_position(n.y, self.miny))
             pind = n.pind
 
-        return rx, ry
+        # rx_filtered = []
+        # ry_filtered = []
+        # for i in range(rx):
+        #     dy1 = ry[i+1] - ry[i]
+        #     dx1 = rx[i+1] - ry[i]
+        #     dy2 = ry[i+2] - ry[i+1]
+        #     dx2 = rx[i+2] - ry[i+1] 
+
+        #     if (dy1/dx1 != dy2/dy2):
+        #         rx_filtered.append(rx[i+1])
+        #         ry_filtered.append(ry[i+1])
+        return rx, ry, 
 
     @staticmethod
     def calc_heuristic(n1, n2):
@@ -208,17 +220,20 @@ class AStarPlanner:
 
 def main():
     # print("start!!")
-    start = [.5, 2.5]
-    end = [.5, 0.5]
-
-    grid_size = 2.0  # [m]
-    robot_radius = 0.5  # [m]
+    start = [0.1, -1.25]
+    end = [3, -1.25]
+    t0=time.time()
+    grid_size = 1.5  # configure it to needs
+    robot_radius = 0.5  # drone radius
     
-    mapp = Mapping(path, 0.05, 3)
+    mapp = Mapping(path, 0.1, 2)
     matrx = mapp.matrix
-    range_of_map = matrx.shape
-    horizonal = range_of_map[0]
-    vertical = range_of_map[1]
+    # range_of_map = matrx.shape
+    # horizonal = range_of_map[0]
+    # vertical = range_of_map[1]
+    # print(mapp.step)
+    
+    #npmatrx = np.array()
     # print(matrx.shape)
     # print(horizonal)
     # print(vertical)
@@ -231,10 +246,17 @@ def main():
     # ox = [horizonal-i for i in ox_old]
 
     # start and goal position
-    sx = (start[0]/mapp.step) + mapp.x_conv   # [m]
-    sy = (start[1]/mapp.step) + mapp.y_conv  # [m]
-    gx = (end[0]/mapp.step) + mapp.x_conv  # [m]
-    gy = (end[1]/mapp.step) + mapp.y_conv # [m]
+    # sx = (start[0]/mapp.step) + mapp.x_conv   # [m]
+    # sy = (start[1]/mapp.step) + mapp.y_conv  # [m]
+    # gx = (end[0]/mapp.step) + mapp.x_conv  # [m]
+    # gy = (end[1]/mapp.step) + mapp.y_conv # [m]
+    
+    sx=2
+    sy=3
+    gx=2
+    gy=10
+    print(mapp.x_conv,mapp.y_conv)
+    print(sx,sy,gx,gy)
     # print(sx,sy,gx,gy)
 
     if show_animation:  # pragma: no cover
@@ -243,31 +265,35 @@ def main():
         plt.plot(gx, gy, "xb")
         plt.grid(True)
         plt.axis("equal")
-
+    t3=time.time()
     a_star = AStarPlanner(ox, oy, grid_size, robot_radius)
-    rx, ry = a_star.planning(sx, sy, gx, gy)
+    rx, ry= a_star.planning(sx, sy, gx, gy)
     rx.reverse()
     ry.reverse()
-    print(mapp.x_conv,mapp.y_conv)
-
+    # print(mapp.x_conv,mapp.y_conv)
+    
     px,py= [],[]
     px.append(start[0])
     py.append(start[1])
     for i in rx:
-        temp=(i-mapp.x_conv)*mapp.step
+        temp=(-i+mapp.x_conv)*mapp.step
         px.append(temp)
     for i in ry:
-        temp=(i-mapp.y_conv)*mapp.step
+        temp=(-i+mapp.y_conv)*mapp.step
         py.append(temp)
     px.append(end[0])
     py.append(end[1])
+
+    t1=time.time()
+    total=t1-t3
+    print(total)
 
     if show_animation:  # pragma: no cover
         print(px)
         print(py)
         plt.plot(rx, ry, "-r")
         plt.show()
-
+    #plt.show()
 
 if __name__ == '__main__':
     main()

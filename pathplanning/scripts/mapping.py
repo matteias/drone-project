@@ -8,9 +8,8 @@ import rospy
 from std_srvs.srv import SetBool
 from rospy.numpy_msg import numpy_msg
 
-# todo create a publisher that sends the map matrix
 # todo fix the expansion, centralize the origin when expansion is applied
-# todo fix the padding, perhaps draw a box around instead of adding "walls" in every direction
+
 
 # zm is only a placeholder
 
@@ -20,7 +19,7 @@ class Mapping:
         # json_file_dir is the directory where the json file is located
         # step size is how small each grid will be. 0.1 is 10 cm, which is what I used
         # inflation is how big you want the walls to be, needs fixing
-        # expansion does not work yet, it expands the map
+        # expansion does not work yet, it shifts the map
 
         self.jfile = json_file_dir
         self.step = step_size
@@ -28,16 +27,24 @@ class Mapping:
 
         with open(self.jfile) as jfile:
             self.map_data = json.load(jfile)
-            map_end, map_start = self.airspace()
-
+            map_end, map_start = self.airspace() # map_end map_start is the max and min of airspaces, where map starts and ends
+            air_end, air_start = self.airspace()
             if expansion > 0:
-                map_start, map_end = self.expand(map_start, map_end, expansion)
-
-            self.matrix = self.clean_map(map_start, map_end, 0, self.step)
+                map_start, map_end = self.expand(map_start, map_end, expansion) # need fixing
             
-            self.x_conv = abs(map_start[0])/step_size
-            self.y_conv = abs(map_start[1])/step_size
+            # conv is how we convert the real coordinates to matrix map
+            # map_start is the new origin of matrix map, so each coordinate should be converted
+            # x_matrix = x/step_size - x_conv
+            self.x_conv = (map_start[0])/step_size
+            self.y_conv = (map_start[1])/step_size
+            # ms = [map_start[0]+self.x_conv, map_start[1]+self.y_conv]
+            # me = [map_end[0]+self.x_conv, map_end[1]+self.y_conv]
+            self.matrix = self.clean_map(map_start, map_end, 0, self.step)
 
+            self.matrix[:,0:inflation] = 1
+            self.matrix[:,-inflation:] = 1
+            self.matrix[0:inflation,:] = 1
+            self.matrix[-inflation:,:] = 1
             for wall in self.map_data["walls"]:
                 wall_start = wall["plane"]["start"]
                 wall_stop = wall["plane"]["stop"]
@@ -68,12 +75,8 @@ class Mapping:
         else:
             print("No marker or roadSign!")
             return 0
-
-        points = []
         
-        # Below is for 
-        # xm = xm/self.step
-        # ym = ym/self.step
+        points = []
         
         if markers == True:    
             for marker in self.map_data["markers"]:
@@ -90,15 +93,15 @@ class Mapping:
             self.add_objects(points, roadsign=True)
 
         else:
-            # Raise error msg later?
+            # Raise error msg maybe?
             return 0
         
 
     def clean_map(self, start, end, expansion, step_size):
         # Generating a zero matrix for the entire map + some extending it a bit
         # since markers could be outside the airspace
-        x = (end[0] + abs(start[0]) + expansion)/step_size
-        y = (end[1] + abs(start[1]) + expansion)/step_size
+        x = (end[0] - start[0] + expansion)/step_size
+        y = (end[1] - start[1] + expansion)/step_size
         map_matrix = np.zeros((int(x), int(y)))
         return map_matrix
        
@@ -106,16 +109,16 @@ class Mapping:
         # inflating the walls so they appear larger in the map
         yidx = int(yidx)
         xidx = int(xidx)
-        for i in range(self.infl):
-            
-            self.matrix[yidx, xidx + i] = 1
-            self.matrix[yidx + i, xidx + i] = 1
-            self.matrix[yidx + i, xidx] = 1
-            self.matrix[yidx + i, xidx - i] = 1
-            self.matrix[yidx, xidx - i] = 1
-            self.matrix[yidx - i, xidx - i] = 1
-            self.matrix[yidx - i, xidx] = 1
-            self.matrix[yidx - i, xidx + i] = 1
+        xmin = xidx - self.infl
+        xmax = xidx + self.infl
+        ymin = yidx - self.infl
+        ymax = yidx + self.infl
+        xmin = max(0,xmin)
+        ymin = max(0,ymin)
+        xmax = min(self.matrix.shape[0],xmax)
+        ymax = min(self.matrix.shape[1],ymax) 
+        self.matrix[xmin:xmax,ymin:ymax] = 1
+        
     
     def line(self, start, end):
         """
@@ -129,7 +132,6 @@ class Mapping:
         y2 = y2/self.step
         dx = x2 - x1
         dy = y2 - y1
-
         
         is_steep = abs(dy) > abs(dx)
         if is_steep:
@@ -163,24 +165,30 @@ class Mapping:
             points.reverse()
         
         return points
+        
+    def PixelIsInsideMap(self, p_shift):
+        return p_shift[0] >= 0 and p_shift[1] >= 0 and p_shift[0] < self.matrix.shape[0] and p_shift[1] < self.matrix.shape[1]
 
     def add_objects(self, points, wall=False, marker=False, roadsign=False):
         # adding the assigned objects into the map matrix
+        # points is the real coordinates divided by stepsize
         for p in points:
 
-            xidx = self.x_conv + p[0]
-            yidx = self.y_conv + p[1]
-            # yidx = conv[0] - p[0]
-            # xidx = conv[1] + p[1]
-            p_shift = (int(yidx), int(xidx))
+            xidx = -self.x_conv + p[0]
+            yidx = -self.y_conv + p[1]
             
-            if wall == True:
-                self.matrix[p_shift] = 1
-                self.inflate_walls(xidx, yidx)
-            elif marker == True:
-                self.matrix[p_shift] = 4
-            elif roadsign == True:
-                self.matrix[p_shift] = 5
+            p_shift = (min(int(xidx), self.matrix.shape[0]-1), min(int(yidx), self.matrix.shape[1]-1))
+            if self.PixelIsInsideMap(p_shift):
+                if wall == True:
+                    self.matrix[p_shift] = 1
+                    self.inflate_walls(xidx, yidx)
+                elif marker == True:
+                    self.matrix[p_shift] = 4
+                elif roadsign == True:
+                    self.matrix[p_shift] = 5
+            else:
+                print("Trying to place something outside map at: " +str(p_shift))
+
     
     #def wall_values(self):
         #pass
