@@ -15,7 +15,7 @@ def find_path(start, end, path_world):
     end: goal point on map
     px, py: path position
     '''
-    grid_size = 1.5  # [m]
+    grid_size = 2  # [m]
     robot_radius = 0.5  # [m]
     
     mapp = Mapping(path_world, 0.1, 2)
@@ -32,6 +32,12 @@ def find_path(start, end, path_world):
     gy = (end[1]/mapp.step) - mapp.y_conv # [matrix]
 
     print("startpoint and endpoint:", sx,sy,gx,gy)
+    if show_animation:  # pragma: no cover
+        plt.plot(ox, oy, ".k")
+        plt.plot(sx, sy, "og")
+        plt.plot(gx, gy, "xb")
+        plt.grid(True)
+        plt.axis("equal")
     a_star = AStarPlanner(ox, oy, grid_size, robot_radius)
     rx, ry = a_star.planning(sx, sy, gx, gy)
     rx.reverse()
@@ -39,6 +45,11 @@ def find_path(start, end, path_world):
 
     # path to follow
     px,py=path_points(mapp,start,end,rx,ry)
+    if show_animation:  # pragma: no cover
+        print(px)
+        print(py)
+        plt.plot(rx, ry, "-r")
+        plt.show()
     view_path(px,py)
     
     return px,py
