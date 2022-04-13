@@ -2,7 +2,14 @@
 Execute these commands to run the whole integrated system
 
 to find camera: 
+'''
 cvlc v4l2:///dev/v4l/by-id/usb-ARKMICRO_USB2.0_PC_CAMERA-video-index0 :live-caching=25
+'''
+
+the whole system:
+'''
+roslaunch brain ms3.launch
+'''
 
 ## Brain
 ```
@@ -22,6 +29,8 @@ rosrun localization loc4_signs
 dependecies: PyTorch (python3)
 
 ```
+roscd perception/scripts
+
 rosrun perception perception.py
 rosrun perception trainsforms.py
 rosrun perception intruder.py
@@ -33,6 +42,10 @@ and signs from the map as /perception/signX.
 <img src="pose_estimation.png" alt="pose_estimation" width="300"/>
 
 ## Pathplanning
+map figure:
+'''
+rosrun pathplanning map_creator
+'''
 animation of path
 ```
 rosrun Pathplanning a_star.py
