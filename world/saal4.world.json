@@ -24,7 +24,6 @@
   ],
 
   "roadsigns": [
-    {"sign": "residential", "pose": {"position": [1.2, 0.0, 0.3], "orientation": [-90, 90, 0]}},
     {"sign": "airport", "pose": {"position": [1.79, 2.2, 0.3], "orientation": [180, 90, 0]}}
    ]
 
