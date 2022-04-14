@@ -5,7 +5,10 @@ to find camera:
 '''
 cvlc v4l2:///dev/v4l/by-id/usb-ARKMICRO_USB2.0_PC_CAMERA-video-index0 :live-caching=25
 '''
-
+new world:
+'''
+rosrun dd2419_simulation json_to_world.py awesome.world
+'''
 Alternatively, use launch files for the whole system and run perception and localization node seperately
 ```
 roslaunch brain ms3.launch
