@@ -25,6 +25,7 @@ rosrun part2 navgoal3
 
 ## Localization
 ```
+rosrun localization static
 rosrun localization loc4_signs
 ```
 

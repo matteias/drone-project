@@ -8,6 +8,9 @@ from a_star import *
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 
+show_animation = False
+path_world = "/home/pascal/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal4.world.json"
+
 def find_path(start, end, path_world):
     '''
     start: start point on map
@@ -31,7 +34,7 @@ def find_path(start, end, path_world):
     gy = (end[1]/mapp.step) - mapp.y_conv # [matrix]
 
     print("startpoint and endpoint:", sx,sy,gx,gy)
-    show_animation = False
+    
     if show_animation:  # pragma: no cover
         plt.plot(ox, oy, ".k")
         plt.plot(sx, sy, "og")
@@ -82,52 +85,50 @@ def view_path(pathx, pathy):
     rospy.loginfo("Published {} waypoints.".format(len(path.poses))) 
 
 
-def exe_path(stx,sty,gox,goy, yaw):
+def exe_path(stx, sty, gox, goy, yaw):
     '''
     stx,sty: start point on map
     gox,goy: goal point on map
     '''
 
-    #Find Path
+    # Find Path
     pathx,pathy = find_path([stx,sty], [gox,goy] , path_world)
-
     pathz = 0.4*np.ones(len(pathx))
     pathyaw = np.zeros(len(pathx))
     print(pathx)
     print(pathy)
     print(pathz)
 
-    #Execute Path
+    # Execute Path
     goal = PoseStamped()
     goal.header.frame_id = 'map'
 
-    #pub = rospy.Publisher('/cf1/cmd_position', Position, queue_size=2)
     rate = rospy.Rate(1) 
     if not rospy.is_shutdown():
         for i in range(len(pathx)):
-	    print(i)
-	    pathyaw[i]=yaw 
+            print(i)
+            pathyaw[i]=yaw[i]
             goal.pose.position.x = pathx[i]
-            goal.pose.position.y= pathy[i]
+            goal.pose.position.y = pathy[i]
             goal.pose.position.z = pathz[i]
             [goal.pose.orientation.x, 
- 	     goal.pose.orientation.y,
- 	     goal.pose.orientation.z,
- 	     goal.pose.orientation.w ] = quaternion_from_euler( math.radians(0),
+ 	         goal.pose.orientation.y,
+ 	         goal.pose.orientation.z,
+ 	         goal.pose.orientation.w ] = quaternion_from_euler( math.radians(0),
                                                                 math.radians(0),
                                                                 pathyaw[i] )
-	    goal.header.stamp = rospy.Time.now()
+            goal.header.stamp = rospy.Time.now()
             pub_goal.publish(goal)
             rate.sleep()
 	    
 
 def main():
 
-    #Define "random" set points in the map
+    # Define "random" set points in the map
     points_x = [0.8, 0.5, 1.2, 0.6, 0.9, 0.8]
     points_y = [2.2, 2.5, 1.0, 1.1, 0.8, 2.2]
 
-    #Hover up
+    # Hover up
     drone_pose1 = tf_buf.lookup_transform('map', 'cf1/base_link', rospy.Time(0), rospy.Duration(0.5))
 
     goal = PoseStamped()
@@ -146,35 +147,31 @@ def main():
 
     rospy.sleep(4)
 
-    #drone_pose1 = tf_buf.lookup_transform('asdfasdf', 'cf1/base_link', rospy.Time(0), rospy.Duration(0.5))
+    # drone_pose1 = tf_buf.lookup_transform('asdfasdf', 'cf1/base_link', rospy.Time(0), rospy.Duration(0.5))
 
 
-    #Fly to these points
+    # Fly to these points
     yaw = 0
     for i in range(len(points_x)-1):
-	stx = points_x[i]
-	sty = points_y[i]
-	gox = points_x[i+1]
-	goy = points_y[i+1]
-	yaw = yaw + 90
-	print('--------------------------------------------')
-    	print('Setting start:')
-	print(stx, sty)
-	print('and goal:')
-	print(gox, goy)
-
-	exe_path(stx, sty, gox, goy, yaw)
-	print('Path executed')
-	rospy.sleep(1)
+        stx = points_x[i]
+        sty = points_y[i]
+        gox = points_x[i+1]
+        goy = points_y[i+1]
+        yaw = yaw + 90
+        print('--------------------------------------------')
+        print('Setting start:')
+        print(stx, sty)
+        print('and goal:')
+        print(gox, goy)
+        exe_path(stx, sty, gox, goy, yaw)
+        print('Path executed')
+        rospy.sleep(1)
 
 
 rospy.init_node('brain1', anonymous=True)
 tf_buf = tf2_ros.Buffer()
 tf_lstn = tf2_ros.TransformListener(tf_buf)
-#pub = rospy.Publisher('/cf1/cmd_position', Position, queue_size=2)
 pub_goal  = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=2)
-
-path_world = "/home/pascal/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal4.world.json"
 
 
 if __name__ == '__main__':
