@@ -25,6 +25,7 @@ rosrun part2 navgoal3
 
 ## Localization
 ```
+rosrun tf2_ros static_transform_publisher 0.01 0 0.02 -1.57 0 -1.57 cf1/base_link cf1/camera_link
 rosrun localization static
 rosrun localization loc4_signs
 ```
