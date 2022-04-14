@@ -29,9 +29,6 @@ def add_bounding_boxes(ax, bbs, category_dict=None):
         )
         ax.add_patch(rect)
 
-
-
-
         if category_dict is not None:
             plt.text(
                 bb["x"],
