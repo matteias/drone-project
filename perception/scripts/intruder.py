@@ -50,7 +50,7 @@ def marker_id_list():
 
 
 
-rospy.init_node('intruder_detection')
+rospy.init_node('intruder')
 rospy.Subscriber('/perception/sign_pose', MarkerArray, get_marker_id)
 
 #broadcaster = tf2_ros.TransformBroadcaster()

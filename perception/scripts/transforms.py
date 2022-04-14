@@ -61,7 +61,7 @@ def transform_from_sign(m):
     return t
 
 
-rospy.init_node('sign_publisher')
+rospy.init_node('transforms')
 rospy.Subscriber('/perception/sign_pose', MarkerArray, send_marker_transform)
 broadcaster = tf2_ros.TransformBroadcaster()
 
