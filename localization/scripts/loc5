@@ -172,8 +172,8 @@ def main():
     while not rospy.is_shutdown():
 	print('----------------------------------------------')
 	#Try to detect and find a marker
-        #try:
-	if 1>0:
+        try:
+	#if 1>0:
 		if not found: #If we have not seen a aruco marker yet
 		    if id_list_aruco:
 			for id in id_list_aruco:
@@ -202,10 +202,15 @@ def main():
                 	broadcaster.sendTransform(t)
                 	print('Transformation send')
 		    else:
+			old_transform = trans_average
+                	old_transform.header.stamp = rospy.Time.now()
+                	old_transform.header.frame_id = 'map'
+                	old_transform.child_frame_id = 'cf1/odom'
+                	broadcaster.sendTransform(old_transform)
 			print('Not detecting any sign')
 
-        #except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
-	if 0>1:
+        except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
+	#if 0>1:
             if found:
                 old_transform = trans_average
                 old_transform.header.stamp = rospy.Time.now()
