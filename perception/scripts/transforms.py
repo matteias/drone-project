@@ -55,8 +55,8 @@ def transform_from_sign(m):
     (t.transform.rotation.x,
      t.transform.rotation.y,
      t.transform.rotation.z,
-     t.transform.rotation.w) = quaternion_from_euler(math.radians(roll),
-                                                     math.radians(pitch),
+     t.transform.rotation.w) = quaternion_from_euler(math.radians(roll-90),
+                                                     math.radians(pitch+90),
                                                      math.radians(yaw))
     return t
 
@@ -67,7 +67,7 @@ broadcaster = tf2_ros.TransformBroadcaster()
 
 
 # Load world JSON
-with open('/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal3.world.json') as f:
+with open('/home/matte/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal3.world.json') as f:
         world = json.load(f)
 
 transforms = [transform_from_sign(m) for m in world[u'roadsigns']]

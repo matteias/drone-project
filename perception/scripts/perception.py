@@ -46,14 +46,13 @@ def image_callback(msg):
     image_raw = msg
 
 
-def draw_bb(s, e, imageBB, color):
+def draw_bb(s, e, imageBB, color,pad):
 
     x_start = s[0]
     y_start = s[1]
 
     #width = int(b["width"])
     #height = int(b["height"])
-    pad = int(2)
     x_end = e[0]
     y_end = e[1]
 
@@ -75,10 +74,10 @@ def draw_bb(s, e, imageBB, color):
     #bb_img = cv2.rectangle(image, start_point, end_point, color, thickness)
     return bb_img
 
-def draw_allbb(starts, ends, img, color=np.array([0,0,255])):
+def draw_allbb(starts, ends, img, color=np.array([0,0,255]), pad = int(2)):
 
     for i in range(len(starts)):
-        img = draw_bb(starts[i], ends[i], img, color)
+        img = draw_bb(starts[i], ends[i], img, color,pad)
 
     return img
 
@@ -133,6 +132,13 @@ def process_bbparams(s, e, cats, cat_ids):
     print("removed BBs: " +  str(len(cat_ids)-len(cat_ids_new)) + '\n  new cats: ' + str(cat_ids_new))
     return s_new, e_new, cats_new, cat_ids_new
 
+def extract_signs(starts, ends, im_array): #extracts images of only signs
+    extracteds = []
+    for i in range(len(starts)):
+        extracted = im_array[starts[i][1]:ends[i][1],starts[i][0]:ends[i][0],:]
+        extracteds.append(extracted)
+    return extracteds
+
 
 
 rospy.init_node('perception')
@@ -159,14 +165,14 @@ if __name__== "__main__":
         markerMsg = Marker()
         markerMsg.header.stamp = t
 
-        starts, extracteds, detected, cats, cat_ids, ends = net.bb_params()
-        if detected:
-            s_new, e_new, _, _ = process_bbparams(starts, ends, cats, cat_ids)
-            #bb_img = draw_allbb(starts, ends, bb_img)
-            bb_img = draw_allbb(s_new, e_new, bb_img, color=np.array([255, 0, 0]))
+        starts, ends, cats, cat_ids, detected = net.bb_params()
+        s_new, e_new, cats_new, ids_new = process_bbparams(starts, ends, cats, cat_ids)
 
-        #print(starts)
-        #print(detected)
+        bb_img = draw_allbb(s_new, e_new, bb_img, color=np.array([255, 0, 0]) , pad = int(4))
+        bb_img = draw_allbb(starts, ends, bb_img, color=np.array([0, 0, 255]) , pad = int(1))
+
+        starts, ends, cats, cat_ids = s_new, e_new, cats_new, ids_new
+        sign_imgs = extract_signs(starts, ends, img)
 
         if detected:
 
@@ -174,9 +180,10 @@ if __name__== "__main__":
             markerArray.header = markerMsg.header
             marker_list = []
 
-            for i, extracted in enumerate(extracteds):
+            for i, extracted in enumerate(sign_imgs):
                 try:
                     rvec, tvec = get_pose(extracted, cats[i], sift, starts[i])
+                    print(tvec)
                 except:
                     rvec, tvec = None, None
 

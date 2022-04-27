@@ -149,7 +149,7 @@ class network():
     def bb_params(self):
         detected = False
         #print(self.bbs)
-        extracteds = []
+        #extracteds = []
         starts = []
         cats = []
         cat_ids = []
@@ -184,8 +184,8 @@ class network():
                 ends.append(end)
                 #size = np.array((height, width)) # width and height wrong?
 
-                extracted = im_array[y_start:y_end,x_start:x_end,:]
-                extracteds.append(extracted)
+                #extracted = im_array[y_start:y_end,x_start:x_end,:]
+                #extracteds.append(extracted)
                 cat = self.category_dict[b['category']]['name']
                 cats.append(cat)
                 cat_id = b['category']
@@ -193,8 +193,8 @@ class network():
             #print(extracteds)
 
             ##b['category']
-            return starts, extracteds, detected, cats, cat_ids, ends
-        return None, None, detected, None, None, None
+        return starts, ends, cats, cat_ids, detected
+        #return None, None, None, None, detected
 
 
 
