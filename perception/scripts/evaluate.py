@@ -148,17 +148,18 @@ class network():
 
     def bb_params(self):
         detected = False
-        print(self.bbs)
+        #print(self.bbs)
         extracteds = []
         starts = []
         cats = []
         cat_ids = []
+        ends = []
 
 
         if len(self.bbs) > 0 and len(self.bbs[0]) > 0:
             detected = True
             num_bbs = len(self.bbs[0])
-            print(num_bbs)
+            #print(num_bbs)
             for b in self.bbs[0]:
                 im_array = np.array(self.image)
                 x_start = int(b["x"])
@@ -179,17 +180,21 @@ class network():
 
                 start = np.array((x_start, y_start))
                 starts.append(start)
+                end = np.array((x_end, y_end))
+                ends.append(end)
                 #size = np.array((height, width)) # width and height wrong?
 
                 extracted = im_array[y_start:y_end,x_start:x_end,:]
                 extracteds.append(extracted)
                 cat = self.category_dict[b['category']]['name']
                 cats.append(cat)
+                cat_id = b['category']
+                cat_ids.append(cat_id)
             #print(extracteds)
 
             ##b['category']
-            return starts, extracteds, detected, cats, cat_ids
-        return None, None, detected, None, None
+            return starts, extracteds, detected, cats, cat_ids, ends
+        return None, None, detected, None, None, None
 
 
 
