@@ -1,0 +1,230 @@
+#!/usr/bin/env python
+
+import rospy
+import json
+import tf2_ros
+from crazyflie_driver.msg import Position
+from tf.transformations import *
+from a_star import *
+from nav_msgs.msg import Path
+from geometry_msgs.msg import PoseStamped
+
+show_animation = False
+path_world = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/flight_trial_2.world.json"
+
+def find_goal(path_world):
+    goalyaw=[]
+    pose_arr = []
+    ori_arr = []
+    goal_arr =[]
+    with open(path_world) as jfile:
+        map_data = json.load(jfile)
+        map_start = map_data["airspace"]["min"]
+        map_end = map_data["airspace"]["max"]
+    for i in map_data["markers"]:
+        marker_pose = i["pose"]["position"]
+        marker_ori = i["pose"]["orientation"]
+        pose_arr.append(marker_pose)
+        ori_arr.append(marker_ori)
+    for i in map_data["roadsigns"]:
+        sign_pose = i["pose"]["position"]
+        sign_ori = i["pose"]["orientation"]
+        pose_arr.append(sign_pose)
+        ori_arr.append(sign_ori)
+    pose_arr=np.array(pose_arr)
+    ori_arr=np.array(ori_arr)
+
+    obj_arr=np.append(pose_arr,ori_arr,axis=1)
+    # sort the position based on y axis
+    ind = np.argsort(obj_arr[:,0])
+    obj_arr=obj_arr[ind]
+    
+    for i in range(obj_arr.shape[0]):
+        goal_arr[i]=obj_arr[i]
+        goal_arr[i][5] += 180
+        if obj_arr[i][2]!=0:
+            if obj_arr[i][5] == 0:       
+                goal_arr[i][1] = obj_arr[i][1] + 0.25
+            elif obj_arr[i][5] == 90:
+                goal_arr[i][0] = obj_arr[i][0] - 0.25
+            elif obj_arr[i][5] == 180:
+                goal_arr[i][1] = obj_arr[i][1] - 0.25
+            elif obj_arr[i][5] == -90:
+                goal_arr[i][0] = obj_arr[i][0] + 0.25       
+            else:
+                print("something went wrong from world map")
+    goalx = goal_arr[:,0]
+    goaly = goal_arr[:,1]
+    goalz = goal_arr[:,2]
+    goalyaw = goal_arr[:,5]
+    return goalx, goaly, goalz, goalyaw
+
+def find_path(start, end, path_world):
+    '''
+    start: start point on map
+    end: goal point on map
+    px, py: path position
+    '''
+    grid_size = 2  # [m]
+    robot_radius = 0.5  # [m]
+    
+    mapp = Mapping(path_world, 0.1, 2)
+    matrx = mapp.matrix
+
+    matrx_indx = np.nonzero(matrx == 1) # represent the walls
+    oy = matrx_indx[0].tolist()
+    ox = matrx_indx[1].tolist()
+
+    # start and goal position
+    sx = (start[0]/mapp.step) - mapp.x_conv # [matrix]
+    sy = (start[1]/mapp.step) - mapp.y_conv  # [matrix]
+    gx = (end[0]/mapp.step) - mapp.x_conv # [matrix]
+    gy = (end[1]/mapp.step) - mapp.y_conv # [matrix]
+
+    print("startpoint and endpoint:", sx,sy,gx,gy)
+    
+    if show_animation:  # pragma: no cover
+        plt.plot(ox, oy, ".k")
+        plt.plot(sx, sy, "og")
+        plt.plot(gx, gy, "xb")
+        plt.grid(True)
+        plt.axis("equal")
+    a_star = AStarPlanner(ox, oy, grid_size, robot_radius)
+    rx, ry = a_star.planning(sx, sy, gx, gy)
+    rx.reverse()
+    ry.reverse()
+
+    # path to follow
+    px,py=path_points(mapp,start,end,rx,ry)
+    if show_animation:  # pragma: no cover
+        print(px)
+        print(py)
+        plt.plot(rx, ry, "-r")
+        plt.show()
+    view_path(px,py)
+    
+    return px,py
+
+
+def view_path(pathx, pathy):
+    '''
+    Publish the ROS path msgs containing the way point
+    '''
+    pub_path  = rospy.Publisher('path', Path, queue_size=2)
+    
+    path = Path()
+    path.header.frame_id = "map"
+    path.header.stamp = rospy.Time.now()
+    for i in range(len(pathx)):
+        pointx = pathx[i]
+        pointy = pathy[i]
+        pose = PoseStamped()
+        pose.pose.position.x = pointx
+        pose.pose.position.y = pointy
+        pose.pose.position.z = 0.3
+        quaternion = quaternion_from_euler(0, 0, 0)
+        pose.pose.orientation.x = quaternion[0]
+        pose.pose.orientation.y = quaternion[1]
+        pose.pose.orientation.z = quaternion[2]
+        pose.pose.orientation.w = quaternion[3]
+        path.poses.append(pose)
+    
+    pub_path.publish(path)
+    rospy.loginfo("Published {} waypoints.".format(len(path.poses))) 
+
+
+def exe_path(stx, sty, gox, goy, yaw):
+    '''
+    stx,sty: start point on map
+    gox,goy: goal point on map
+    '''
+
+    # Find Path
+    pathx,pathy = find_path([stx,sty], [gox,goy] , path_world)
+    pathz = 0.4*np.ones(len(pathx))
+    pathyaw = np.zeros(len(pathx))
+    print(pathx)
+    print(pathy)
+    print(pathz)
+
+    # Execute Path
+    goal = PoseStamped()
+    goal.header.frame_id = 'map'
+
+    rate = rospy.Rate(1) 
+    if not rospy.is_shutdown():
+        for i in range(len(pathx)):
+            print(i)
+            pathyaw[i]=yaw[i]
+            goal.pose.position.x = pathx[i]
+            goal.pose.position.y = pathy[i]
+            goal.pose.position.z = pathz[i]
+            [goal.pose.orientation.x, 
+ 	         goal.pose.orientation.y,
+ 	         goal.pose.orientation.z,
+ 	         goal.pose.orientation.w ] = quaternion_from_euler( math.radians(0),
+                                                                math.radians(0),
+                                                                pathyaw[i] )
+            goal.header.stamp = rospy.Time.now()
+            pub_goal.publish(goal)
+            rate.sleep()
+	    
+
+def main():
+
+    # Define "random" set points in the map
+    points_x, points_y, pointz, pointsyaw = find_goal(path_world)
+
+    # Hover up
+    drone_pose1 = tf_buf.lookup_transform('map', 'cf1/base_link', rospy.Time(0), rospy.Duration(0.5))
+
+    goal = PoseStamped()
+    goal.header.frame_id = 'map'
+    goal.header.stamp = rospy.Time.now()
+    goal.pose.position.x = drone_pose1.transform.translation.x
+    goal.pose.position.y = drone_pose1.transform.translation.y
+    goal.pose.position.z = 0.4
+    goal.pose.orientation.x = drone_pose1.transform.rotation.x
+    goal.pose.orientation.y = drone_pose1.transform.rotation.y
+    goal.pose.orientation.z = drone_pose1.transform.rotation.z
+    goal.pose.orientation.w = drone_pose1.transform.rotation.w
+    print('Hover at:', goal.pose.position.x, goal.pose.position.y, goal.pose.position.z)
+
+    pub_goal.publish(goal)
+
+    rospy.sleep(4)
+
+    # drone_pose1 = tf_buf.lookup_transform('asdfasdf', 'cf1/base_link', rospy.Time(0), rospy.Duration(0.5))
+
+
+    # Fly to these points
+    yaw = 0
+    for i in range(len(points_x)-1):
+        stx = points_x[i]
+        sty = points_y[i]
+        gox = points_x[i+1]
+        goy = points_y[i+1]
+        yaw = yaw + 90
+        print('--------------------------------------------')
+        print('Setting start:')
+        print(stx, sty)
+        print('and goal:')
+        print(gox, goy)
+        exe_path(stx, sty, gox, goy, yaw)
+        print('Path executed')
+        rospy.sleep(1)
+
+
+rospy.init_node('brain1', anonymous=True)
+tf_buf = tf2_ros.Buffer()
+tf_lstn = tf2_ros.TransformListener(tf_buf)
+pub_goal  = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=2)
+
+
+if __name__ == '__main__':
+
+    rate = rospy.Rate(1)
+    while not rospy.is_shutdown():
+        main()
+        rate.sleep()
+    rospy.spin()
