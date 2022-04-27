@@ -148,34 +148,47 @@ class network():
 
     def bb_params(self):
         detected = False
+        print(self.bbs)
+        extracteds = []
+        starts = []
+        cats = []
+        cat_ids = []
+
+
         if len(self.bbs) > 0 and len(self.bbs[0]) > 0:
             detected = True
-            b = self.bbs[0][0]
+            num_bbs = len(self.bbs[0])
+            print(num_bbs)
+            for b in self.bbs[0]:
+                im_array = np.array(self.image)
+                x_start = int(b["x"])
+                y_start = int(b["y"])
 
-            im_array = np.array(self.image)
-            x_start = int(b["x"])
-            y_start = int(b["y"])
+                width = int(b["width"])
+                height = int(b["height"])
+                pad = int(2)
+                x_end = x_start + width
+                y_end = y_start + height
 
-            width = int(b["width"])
-            height = int(b["height"])
-            pad = int(2)
-            x_end = x_start + width
-            y_end = y_start + height
+                h = im_array.shape[0]
+                w = im_array.shape[1]
+                x_start = max(pad,min(w-pad,x_start))
+                x_end = max(pad,min(w-pad,x_end))
+                y_start = max(pad,min(h-pad,y_start))
+                y_end = max(pad,min(h-pad,y_end))
 
-            h = im_array.shape[0]
-            w = im_array.shape[1]
-            x_start = max(pad,min(w-pad,x_start))
-            x_end = max(pad,min(w-pad,x_end))
-            y_start = max(pad,min(h-pad,y_start))
-            y_end = max(pad,min(h-pad,y_end))
+                start = np.array((x_start, y_start))
+                starts.append(start)
+                #size = np.array((height, width)) # width and height wrong?
 
-            start = np.array((x_start, y_start))
-            size = np.array((height, width)) # width and height wrong?
+                extracted = im_array[y_start:y_end,x_start:x_end,:]
+                extracteds.append(extracted)
+                cat = self.category_dict[b['category']]['name']
+                cats.append(cat)
+            #print(extracteds)
 
-            extracted = im_array[y_start:y_end,x_start:x_end,:]
-
-            cat = self.category_dict[b['category']]['name']
-            return start, extracted, detected, cat, b['category']
+            ##b['category']
+            return starts, extracteds, detected, cats, cat_ids
         return None, None, detected, None, None
 
 
@@ -290,11 +303,11 @@ def get_pose(extracted, cat, sift, start): # extracted: from camera bb, category
     succ, rvec, tvec = cv.solvePnP(src, des, mtx, dist)
 
     # Transformation matrix
-    R, _ = cv.Rodrigues(rvec)
-    T = np.concatenate((R,tvec),axis = 1)
-    temp = np.array([0,0,0,1])
-    temp = np.reshape(temp,(1,4))
-    T = np.concatenate((T,temp), axis = 0)
+    #R, _ = cv.Rodrigues(rvec)
+    #T = np.concatenate((R,tvec),axis = 1)
+    #temp = np.array([0,0,0,1])
+    #temp = np.reshape(temp,(1,4))
+    #T = np.concatenate((T,temp), axis = 0)
 
     #print(rvec)
     #print(tvec)
@@ -317,11 +330,11 @@ def main():
 
     net.get_bbs(image)
     #net.show_bbs()
-    start, extracted, _, cat, cat_id = net.bb_params()
-
-    rvec, tvec = get_pose(extracted, cat, sift, start)
-    print(rvec)
-    print(tvec)
+    starts, extracteds, _, cats, cat_ids = net.bb_params()
+    for i, extracted in enumerate(extracteds):
+        rvec, tvec = get_pose(extracted, cats[i], sift, starts[i])
+        print(rvec)
+        print(tvec)
 
     # FOR PYTHON PLOTTING
     #image = cv.polylines(image,[np.int32(des)],True,(0,255,0),1, cv.LINE_AA)
