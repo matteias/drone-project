@@ -16,7 +16,7 @@ from geometry_msgs.msg import TransformStamped, Vector3, PoseStamped, Transform,
 from std_msgs.msg import Header
 from aruco_msgs.msg import MarkerArray
 #from crazyflie_gazebo.msg import Position
-from pyquaternion import Quaternion
+from pyquaternion import *
 
 queue = collections.deque(maxlen = 5)
 broadcaster = tf2_ros.TransformBroadcaster()
@@ -158,16 +158,62 @@ def filter_trans(new_trans, old_trans):
     diff_x = new_trans.transform.translation.x - old_trans.transform.translation.x
     diff_y = new_trans.transform.translation.y - old_trans.transform.translation.y
     diff_z = new_trans.transform.translation.z - old_trans.transform.translation.z
-    distance_sq = diff_x * diff_x + diff_y * diff_y + diff_z * diff_z
-    print('Distance to old transform: ' + str(math.sqrt(distance_sq)))
+    distance = math.sqrt( diff_x * diff_x + diff_y * diff_y + diff_z * diff_z )
+    print('Distance to old transform: ' + str( distance ) )
 
-    if distance_sq < 0.5 * 0.5: 
+    if distance < 0.1: 
 	filt_trans = new_trans
+	print('New transformation accepted')
+    elif distance < 5:
+	filt_trans, K = propTrans(new_trans, old_trans, distance)
+	print('New transformation scaled with K = ' + str(K))
     else:
 	filt_trans = old_trans #If distance is too large, ditch new transform
 	print('New transformation rejected')
 
     return filt_trans
+
+def propTrans(new_trans, old_trans, distance):
+
+    if distance > 1: 
+	K = 0.2 * 1/distance
+    else:
+	K = 0.2
+
+    prop_trans = old_trans
+    prop_trans.transform.translation.x += K * ( new_trans.transform.translation.x - old_trans.transform.translation.x )
+    prop_trans.transform.translation.y += K * ( new_trans.transform.translation.y - old_trans.transform.translation.y ) 
+    prop_trans.transform.translation.z += K * ( new_trans.transform.translation.z - old_trans.transform.translation.z )
+    
+    #print(new_trans.transform.rotation)
+    old_quat = Quaternion(new_trans.transform.rotation.x,
+	new_trans.transform.rotation.y,
+	new_trans.transform.rotation.z,
+	new_trans.transform.rotation.w)
+
+    new_quat = Quaternion(old_trans.transform.rotation.x,
+	old_trans.transform.rotation.y,
+	old_trans.transform.rotation.z,
+	old_trans.transform.rotation.w)
+
+    deltaQuat = (old_quat / new_quat).elements
+
+    _, _, yaw_delta = euler_from_quaternion((deltaQuat[0],deltaQuat[1],deltaQuat[2],deltaQuat[3]))
+
+
+    _, _, yaw_old = euler_from_quaternion((old_trans.transform.rotation.x,
+					   old_trans.transform.rotation.y,
+					   old_trans.transform.rotation.z,
+					   old_trans.transform.rotation.w))
+
+    yaw_filt = yaw_old - K * yaw_delta
+
+    (prop_trans.transform.rotation.x,
+     prop_trans.transform.rotation.y,
+     prop_trans.transform.rotation.z,
+     prop_trans.transform.rotation.w) = quaternion_from_euler(0, 0, yaw_filt)
+
+    return prop_trans, K
 
 #Main function
 def main():
