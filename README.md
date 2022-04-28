@@ -12,7 +12,7 @@ rosrun dd2419_simulation json_to_world.py awesome.world
 Alternatively, use launch files for the whole system and run perception and localization node seperately
 ```
 roslaunch brain ms4.launch
-rosrun localization loc5
+rosrun localization loc5_filt
 roscd perception/scripts
 rosrun perception perception.py
 ```
