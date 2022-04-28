@@ -8,12 +8,12 @@ from tf.transformations import *
 from a_star import *
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
+import copy
 
 show_animation = False
 path_world = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/flight_trial_2.world.json"
 
 def find_goal(path_world):
-    goalyaw=[]
     pose_arr = []
     ori_arr = []
     goal_arr =[]
@@ -38,21 +38,21 @@ def find_goal(path_world):
     # sort the position based on y axis
     ind = np.argsort(obj_arr[:,0])
     obj_arr=obj_arr[ind]
-    
+    goal_arr = copy.deepcopy(obj_arr)
+
     for i in range(obj_arr.shape[0]):
-        goal_arr[i]=obj_arr[i]
-        goal_arr[i][5] += 180
         if obj_arr[i][2]!=0:
             if obj_arr[i][5] == 0:       
-                goal_arr[i][1] = obj_arr[i][1] + 0.25
+                goal_arr[i][1] = goal_arr[i][1] + 0.25
             elif obj_arr[i][5] == 90:
-                goal_arr[i][0] = obj_arr[i][0] - 0.25
+                goal_arr[i][0] = goal_arr[i][0] - 0.25
             elif obj_arr[i][5] == 180:
-                goal_arr[i][1] = obj_arr[i][1] - 0.25
+                goal_arr[i][1] = goal_arr[i][1] - 0.25
             elif obj_arr[i][5] == -90:
-                goal_arr[i][0] = obj_arr[i][0] + 0.25       
-            else:
-                print("something went wrong from world map")
+                goal_arr[i][0] = goal_arr[i][0] + 0.25       
+        else:
+            print("something went wrong from world map",i)
+    goal_arr[:,5] += 180
     goalx = goal_arr[:,0]
     goaly = goal_arr[:,1]
     goalz = goal_arr[:,2]
