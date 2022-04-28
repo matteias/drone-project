@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <launch>
   <include file="$(find dd2419_launch)/launch/base.launch">
-    <arg name="ch" value="93"/>
+    <arg name="ch" value="96"/>
   </include>
 
   <include file="$(find dd2419_launch)/launch/world_publisher.launch">
     <arg name="world_name" value="flight_trial_2"/>
   </include>
 
-  <node name="navgoal3" pkg="flight_camp"  type="navgoal3" />
+  <node name="navgoal3" pkg="part2"  type="navgoal3" />
   <node pkg="tf2_ros" type="static_transform_publisher" name="cam_to_drone" args="0.01 0 0.02 -1.57 0 -1.57 cf1/base_link cf1/camera_link" />
   <!-- <node name="loc4_signs" pkg="localization"  type="loc4_signs" /> -->
   <node name="transforms" pkg="perception"  type="transforms.py" />
