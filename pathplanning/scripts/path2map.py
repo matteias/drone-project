@@ -168,7 +168,7 @@ def path_simplify(grid, pathx,pathy):
         result_path.append(path[-1])
 
     print("Final path:", result_path)
-    return result_path
+    return result_path[:,0], result_path[:,1]
 
 def bresenham(start, end):
     n1, e1 = start[:2]
