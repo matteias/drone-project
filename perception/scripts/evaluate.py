@@ -19,6 +19,8 @@ import cv2 as cv
 import utils
 from detector import Detector
 
+#from perception import process_bbparams, extract_signs
+
 
 def load_dict():
     category_dict = [
@@ -102,7 +104,7 @@ def load_dict():
 
 
 class network():
-    def __init__(self, device = "cpu", model_path = 'network1.pt'):
+    def __init__(self, device = "cpu", model_path = 'net_5000.pt'):
         self.device = device
 
         detector = Detector().to(device)
@@ -187,8 +189,10 @@ class network():
                 #extracted = im_array[y_start:y_end,x_start:x_end,:]
                 #extracteds.append(extracted)
                 cat = self.category_dict[b['category']]['name']
+
                 cats.append(cat)
                 cat_id = b['category']
+                #print(cat_id)
                 cat_ids.append(cat_id)
             #print(extracteds)
 
@@ -196,6 +200,13 @@ class network():
         return starts, ends, cats, cat_ids, detected
         #return None, None, None, None, detected
 
+
+def extract_signs(starts, ends, im_array): #extracts images of only signs
+    extracteds = []
+    for i in range(len(starts)):
+        extracted = im_array[starts[i][1]:ends[i][1],starts[i][0]:ends[i][0],:]
+        extracteds.append(extracted)
+    return extracteds
 
 
 def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points between two sift point lists
@@ -205,12 +216,13 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
     search_params = dict(checks = 50)
     flann = cv.FlannBasedMatcher(index_params, search_params)
     matches = flann.knnMatch(des1,des2,k=2)
+    #print(len(matches))
     # store all the good matches as per Lowe's ratio test.
     good = []
     for m,n in matches:
         if m.distance < 0.7*n.distance:
             good.append(m)
-    #print(good)
+    #print(len(good))
 
     success = False
 
@@ -221,6 +233,7 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
 
         src_pts = np.float32([ kp1[m.queryIdx].pt for m in good ]).reshape(-1,1,2)
         dst_pts = np.float32([ kp2[m.trainIdx].pt for m in good ]).reshape(-1,1,2)
+        #print(src_pts.shape)
         M, mask = cv.findHomography(src_pts, dst_pts, cv.RANSAC,5.0)
         matchesMask = mask.ravel().tolist()
         h,w = img1.shape
@@ -251,20 +264,32 @@ def point_corr(kp1, des1, kp2, des2, img1, img2): #get corresponding points betw
 
 
 def get_pose(extracted, cat, sift, start): # extracted: from camera bb, category: from bounding box
+    #print(cat)
     ref_path = 'ref_signs/p' + cat + '.jpg'
     ref_path = ref_path.replace(' ', '_')
 
     ref = cv.imread(ref_path, cv.IMREAD_GRAYSCALE) # Use category to get reference image
+    if cat == 'no stopping and parking' or cat == 'no parking':
+        ref = cv.equalizeHist(ref)
+        #print('EQUALIZED HIST')
+
+
+    ref = cv.GaussianBlur(ref,(5,5),cv.BORDER_DEFAULT)
     kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
+    #print('num ref keypoints: ' + str(len(kp1)))
 
     try:
         img = cv.cvtColor(extracted,cv.COLOR_BGR2GRAY)
+        if cat == 'no stopping and parking' or cat == 'no parking':
+            img = cv.equalizeHist(img)
+            #print('EQUALIZED HIST')
+        #print(cat)
     except:
         return None, None
     kp2, des2 = sift.detectAndCompute(img, None)
+    #print('num img keypoints: ' + str(len(kp2)))
 
     src, des = point_corr(kp1, des1, kp2, des2, ref, img) # image keypoints
-
     try:
         N = src.shape[0]
     except:
@@ -307,18 +332,6 @@ def get_pose(extracted, cat, sift, start): # extracted: from camera bb, category
     # Solve Perspective-n-Point for corners
     succ, rvec, tvec = cv.solvePnP(src, des, mtx, dist)
 
-    # Transformation matrix
-    #R, _ = cv.Rodrigues(rvec)
-    #T = np.concatenate((R,tvec),axis = 1)
-    #temp = np.array([0,0,0,1])
-    #temp = np.reshape(temp,(1,4))
-    #T = np.concatenate((T,temp), axis = 0)
-
-    #print(rvec)
-    #print(tvec)
-
-    # Visualization
-
 
     return rvec, tvec
 
@@ -330,16 +343,22 @@ def main():
 
     #kp1, des1 = sift.detectAndCompute(ref, None) # reference keypoints
 
-    image = cv.imread('validation/img_150.jpg')
+    image = cv.imread('test/img_135.jpg')
     #print(image.shape)
 
     net.get_bbs(image)
     #net.show_bbs()
-    starts, extracteds, _, cats, cat_ids = net.bb_params()
+    starts, ends, cats, cat_ids, detected = net.bb_params()
+    #print(starts)
+
+    starts, ends, cats, ids = process_bbparams(starts, ends, cats, cat_ids)
+
+    extracteds = extract_signs(starts, ends, image)
+
     for i, extracted in enumerate(extracteds):
         rvec, tvec = get_pose(extracted, cats[i], sift, starts[i])
-        print(rvec)
-        print(tvec)
+        #print(rvec)
+        #print(tvec)
 
     # FOR PYTHON PLOTTING
     #image = cv.polylines(image,[np.int32(des)],True,(0,255,0),1, cv.LINE_AA)
@@ -355,6 +374,56 @@ def main():
     #    cv.destroyAllWindows()
     #extracted = cv.GaussianBlur(extracted,(3,3),cv.BORDER_DEFAULT)
 
+
+def process_bbparams(s, e, cats, cat_ids):
+    N = len(s)
+
+    threshold = 1/2 #threshold for overlapping of bounding boxes (S/U)
+    IoUmat = np.zeros((N,N))
+    mergeCount = np.ones(N)
+    shouldInclude = np.ones(N, dtype = bool)
+    for i in range(N):
+        for j in range(N):
+            if not i == j:
+                snittS = np.maximum(s[i], s[j])
+                snittE = np.minimum(e[i], e[j])
+                snittDelta = snittE-snittS
+                if np.min(snittDelta) <= 0:
+                    IoU = 0
+                else:#hej!
+                    I = snittDelta[0]*snittDelta[1]
+                    A1 = np.prod(e[i]-s[i])
+                    A2 = np.prod(e[j]-s[j])
+                    #U = A1 + A2 - 2*I
+                    #IoU = I / U
+                    IoU = np.min(np.array([A1,A2]))/I
+                IoUmat[i,j] = IoU
+
+    merged = True
+    while merged:
+        merged = False
+        for i in range(N):
+            if shouldInclude[i]:
+                for j in range(N):
+                    if IoUmat[i,j] > threshold and cat_ids[i] == cat_ids[j] and shouldInclude[j]:
+                        s[i] = np.minimum(s[i], s[j])
+                        e[i] = np.maximum(e[i], e[j])
+                        shouldInclude[j] = False
+                        merged = True
+
+    s_new = []
+    e_new = []
+    cats_new = []
+    cat_ids_new = []
+    for i, val in enumerate(shouldInclude):
+        if val:
+            s_new.append(s[i])
+            e_new.append(e[i])
+            cats_new.append(cats[i])
+            cat_ids_new.append(cat_ids[i])
+
+    #print("removed BBs: " +  str(len(cat_ids)-len(cat_ids_new)) + '\n  new cats: ' + str(cat_ids_new))
+    return s_new, e_new, cats_new, cat_ids_new
 
 
 if __name__ == '__main__':
