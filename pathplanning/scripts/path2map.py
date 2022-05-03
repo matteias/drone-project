@@ -12,13 +12,17 @@ import copy
 path_world = "/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/flight_trial_2.world.json"
 
 def find_goal(path_world):
+    '''
+    to find the goals on the map
+    path_world is the path location of world map
+    goal_arr is the array contains goals, in a order of[x, y, z, roll, pitch, yaw]
+    '''
     pose_arr = []
     ori_arr = []
     goal_arr =[]
+    margin = 0.4
     with open(path_world) as jfile:
         map_data = json.load(jfile)
-        map_start = map_data["airspace"]["min"]
-        map_end = map_data["airspace"]["max"]
     for i in map_data["markers"]:
         marker_pose = i["pose"]["position"]
         marker_ori = i["pose"]["orientation"]
@@ -41,13 +45,13 @@ def find_goal(path_world):
     for i in range(obj_arr.shape[0]):
         if obj_arr[i][2]!=0:
             if obj_arr[i][5] == 0:       
-                goal_arr[i][1] = goal_arr[i][1] + 0.25
+                goal_arr[i][1] = goal_arr[i][1] + margin
             elif obj_arr[i][5] == 90:
-                goal_arr[i][0] = goal_arr[i][0] - 0.25
+                goal_arr[i][0] = goal_arr[i][0] - margin
             elif obj_arr[i][5] == 180:
-                goal_arr[i][1] = goal_arr[i][1] - 0.25
+                goal_arr[i][1] = goal_arr[i][1] - margin
             elif obj_arr[i][5] == -90:
-                goal_arr[i][0] = goal_arr[i][0] + 0.25       
+                goal_arr[i][0] = goal_arr[i][0] + margin       
         else:
             print("something went wrong from world map",i)
     goal_arr[:,5] += 180
@@ -62,6 +66,8 @@ def find_path(start, end, path_world):
     start: start point on map
     end: goal point on map
     px, py: path position
+    pathx, pathy, pathz: final path position
+    pathyaw: yaw angle for path
     '''
     grid_size = 2  # [m]
     robot_radius = 0.5  # [m]
@@ -73,13 +79,13 @@ def find_path(start, end, path_world):
     oy = matrx_indx[0].tolist()
     ox = matrx_indx[1].tolist()
 
-    # start and goal position
+    # start and goal position0
     sx = (start[0]/mapp.step) - mapp.x_conv # [matrix]
     sy = (start[1]/mapp.step) - mapp.y_conv  # [matrix]
     gx = (end[0]/mapp.step) - mapp.x_conv # [matrix]
     gy = (end[1]/mapp.step) - mapp.y_conv # [matrix]
 
-    print("startpoint and endpoint:", sx,sy,gx,gy)
+    # print("startpoint and endpoint:", sx,sy,gx,gy)
     if show_animation:  # pragma: no cover
         plt.plot(ox, oy, ".k")
         plt.plot(sx, sy, "og")
@@ -92,18 +98,84 @@ def find_path(start, end, path_world):
     ry.reverse()
 
     # path to follow
-    px,py=path_points(mapp,start,end,rx,ry)
-    pathx,pathy=path_simplify(matrx,)
+    px,py =path_points(mapp,start,end,rx,ry)
+    pathx,pathy=path_simplify(px,py)
+
+    pathz, pathyaw = [], []
+    z_start = start[2]
+    yaw_start = start[3]
+    pathz.append(z_start)
+    pathyaw.append(yaw_start)
+    
+    z_end = end[2]
+    yaw_end = end[3]
+    z=z_start
+    yaw=yaw_start
+    for i in range(len(pathx)-1):
+        if z_start<z_end:
+            if z<z_end:
+                z+=0.05
+            else:
+                z=z_end
+        elif z_start>z_end:
+            if z>z_end:
+                z-=0.05
+            else:
+                z=z_end
+        else:
+            z=z_end
+        pathz.append(z)
+        if yaw_start<yaw_end:
+            if yaw<yaw_end:
+                yaw+=45
+            else:
+                yaw=yaw_end
+        elif yaw_start>yaw_end:
+            if yaw>yaw_end:
+                yaw-=45
+            else:
+                yaw=yaw_end
+        else:
+            yaw=yaw_end
+        pathyaw.append(yaw)
+
+    pathz.append(z_end)
+    pathyaw.append(yaw_end)
     if show_animation:  # pragma: no cover
-        print(px)
-        print(py)
+        # print(pathx)
+        # print(pathy)
+        print('Final path',(pathx,pathy,pathz,pathyaw))
         plt.plot(rx, ry, "-r")
         plt.show()
-    view_path(px,py)
     
-    return px,py
+    return pathx, pathy, pathz, pathyaw
 
-def view_path(pathx, pathy):
+def path_simplify(pathx, pathy):
+    """
+    Test many nodes and find the longest possible direct path between them.
+    """
+    if len(pathx) <= 2:
+        return pathx, pathy
+
+    result_x=[]
+    result_y=[]
+
+    # print("Simplifying path:", [pathx,pathy])
+    
+    result_x.append(pathx[0])
+    result_y.append(pathy[0])
+    
+    for i in range(len(pathx)-2):
+       if (pathx[i+1]-pathx[i])*(pathy[i+2]-pathy[i+1]) != (pathx[i+2]-pathx[i+1])*(pathy[i+1]-pathy[i]):
+           result_x.append(pathx[i+1])
+           result_y.append(pathy[i+1])
+    
+    result_x.append(pathx[len(pathx)-1])
+    result_y.append(pathy[len(pathx)-1])
+    # print("Final path:", [result_x,result_y])
+    return result_x, result_y
+
+def view_path(pathx, pathy, pathz, pathyaw):
     '''
     Publish the ROS path msgs containing the way point
     '''
@@ -115,11 +187,13 @@ def view_path(pathx, pathy):
     for i in range(len(pathx)):
         pointx = pathx[i]
         pointy = pathy[i]
+        pointz = pathz[i]
+        pointyaw = pathyaw[i]
         pose = PoseStamped()
         pose.pose.position.x = pointx
         pose.pose.position.y = pointy
-        pose.pose.position.z = 0.3
-        quaternion = quaternion_from_euler(0, 0, 0)
+        pose.pose.position.z = pointz
+        quaternion = quaternion_from_euler(0, 0, pointyaw)
         pose.pose.orientation.x = quaternion[0]
         pose.pose.orientation.y = quaternion[1]
         pose.pose.orientation.z = quaternion[2]
@@ -129,94 +203,62 @@ def view_path(pathx, pathy):
     pub_path.publish(path)
     rospy.loginfo("Published {} waypoints.".format(len(path.poses))) 
 
-def path_simplify(grid, pathx,pathy):
-    """
-    Test many nodes and find the longest possible direct path between them.
-    """
-    path=[]
-    for i in range(len(pathx)):
-        p=[pathx[i],pathy[i]]
-        path.append(p)
-    path = np.array(path)
-    if len(path) <= 2:
-        return path
-    print("Simplifying path:", [path, path])
-    start_idx = 0
-    end_idx = len(path) - 1
-    result_path = [path[0]]
-    while start_idx < end_idx:
-        start = path[start_idx]
-        end = path[end_idx]
-        min_height = min(start[2], end[2])
-        cells = bresenham(start, end)
+def exe_path(stx, sty, stz, styaw, gox, goy, goz, goyaw):
+    '''
+    stx,sty: start point on map
+    gox,goy: goal point on map
+    '''
 
-        has_obs = False
-        for n, e in cells:
-            if grid[n, e] >= min_height:
-                has_obs = True
-                break
+    # Find Path
+    pathx, pathy, pathz, pathyaw = find_path([stx,sty,stz,styaw], [gox,goy,goz,goyaw], path_world)
 
-        if has_obs:
-            end_idx -= 1
-            if end_idx == start_idx:
-                print("No direct path! {}".format(path[start_idx]))
-        else:
-            result_path.append(end)
-            start_idx = end_idx
-            end_idx = len(path) - 1
-    if result_path[-1] != path[-1]:
-        result_path.append(path[-1])
+    view_path(pathx, pathy, pathz, pathyaw)
+    # Execute Path
+    goal = PoseStamped()
+    goal.header.frame_id = 'map'
 
-    print("Final path:", result_path)
-    return result_path[:,0], result_path[:,1]
+    rate = rospy.Rate(1) 
+    if not rospy.is_shutdown():
+        for i in range(len(pathx)):
+            print(i+1)
+            goal.pose.position.x = pathx[i]
+            goal.pose.position.y = pathy[i]
+            goal.pose.position.z = pathz[i]
+            [goal.pose.orientation.x, 
+ 	         goal.pose.orientation.y,
+ 	         goal.pose.orientation.z,
+ 	         goal.pose.orientation.w ] = quaternion_from_euler( math.radians(0),
+                                                                math.radians(0),
+                                                                pathyaw[i] )
+            goal.header.stamp = rospy.Time.now()
+            pub_goal.publish(goal)
+            rate.sleep()
 
-def bresenham(start, end):
-    n1, e1 = start[:2]
-    n2, e2 = end[:2]
-
-    if abs(e2 - e1) < 1e-5:
-        return [(n, e1) for n in range(min(n1, n2), max(n1, n2) + 1)]
-
-    slope = (n2 - n1) / (e2 - e1)
-
-    if e1 < e2:
-        n, e = n1, e1
-        ne, ee = n2, e2
-    else:
-        n, e = n2, e2
-        ne, ee = n1, e1
-
-    cells = []
-
-    f = n
-    if slope >= 0:
-        while e <= ee and n <= ne:
-            cells.append((n, e))
-            f_new = f + slope
-            if f_new > n + 1:
-                n += 1
-            else:
-                e += 1
-                f = f_new
-    else:
-        while e <= ee and n >= ne:
-            cells.append((n, e))
-            f_new = f + slope
-            if f_new < n - 1:
-                n -= 1
-            else:
-                e += 1
-                f = f_new
-
-    return cells
-rospy.init_node('path_planner', anonymous=True)
+rospy.init_node('path2map', anonymous=True)
+pub_goal  = rospy.Publisher('/move_base_simple/goal', PoseStamped, queue_size=2)
 rate = rospy.Rate(10)
 
 if __name__ == '__main__':
-    start = [0.8, 0.15]
-    end = [4, 3.5]
+    points_x, points_y, points_z, points_yaw = find_goal(path_world)
     try:
-        px,py = find_path(start, end, path_world)
+        for i in range(len(points_x)-1):
+            stx = points_x[i]
+            sty = points_y[i]
+            stz = points_z[i]
+            styaw = points_yaw[i]
+            gox = points_x[i+1]
+            goy = points_y[i+1]
+            goz = points_z[i+1]
+            goyaw = points_yaw[i+1]
+            
+            print('--------------------------------------------')
+            print('Setting start:')
+            print(stx, sty, stz, styaw)
+            print('and goal:')
+            print(gox, goy, goz, goyaw)
+            exe_path(stx, sty, stz, styaw, gox, goy, goz, goyaw)
+            print('Path executed')
+            rospy.sleep(1)
     except rospy.ROSInterruptException:
         pass
     
