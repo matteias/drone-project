@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python
 from evaluate import *
 import rospy
 from sensor_msgs.msg import Image

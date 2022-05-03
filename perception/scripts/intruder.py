@@ -3,7 +3,7 @@ import rospy
 import numpy as np
 from aruco_msgs.msg import MarkerArray, Marker
 import json
-#import copy
+import copy
 
 #from evaluate import load_dict
 
@@ -25,19 +25,23 @@ sign_dict = {
     "roundabout_warning": 13,
     "stop": 14,
 }
-detected_id = None
+detected_ids = []
 
 
 def get_marker_id(msg):
     #print(msg)
-    global detected_id
+    global detected_ids
+    detected_ids = []
+    
     for marker in msg.markers:
         idd = marker.id
         detected_id = idd
+        detected_ids.append(detected_id)
+    #print(detected_ids)
         #print(idd)
 
 def marker_id_list():
-    with open('/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal3.world.json') as f:
+    with open('/home/maciejw/dd2419_ws/src/course_packages/dd2419_resources/worlds_json/saal5.world.json') as f:
         world = json.load(f)
 
     signs = []
@@ -56,7 +60,7 @@ rospy.Subscriber('/perception/sign_pose', MarkerArray, get_marker_id)
 #broadcaster = tf2_ros.TransformBroadcaster()
 
 
-rate = rospy.Rate(10)
+rate = rospy.Rate(30)
 
 signs = marker_id_list()
 #signs = np.array([1])
@@ -67,30 +71,25 @@ intruder_detected = False
 prev_intruder = None
 count = 0
 
-
 while not rospy.is_shutdown():
     #print(detected_id)
     if not intruder_detected:
-        if detected_id in signs or detected_id is None:
-            count = 0
-            print('sign ' + str(detected_id) + 'is not an intruder')
-            #print('sign: ' + str(detected_id) + ' is not and intruder.')
-        else:
-            #print('sign: ' + str(detected_id) + ' is an intruder!')
-            if prev_intruder == detected_id:
-                #print('prev: ' + str(prev_intruder) + ' curr: ' + str(detected_id))
-                print(count)
-                count += 1
+        for detected_id in detected_ids:
+            print(detected_id)
+            if detected_id in signs:
+                print('sign ' + str(detected_id) + 'is not an intruder')
+                pass
             else:
-                count = 0
+                count += 1
+                print('sign ' + str(detected_id) + 'is an intruder')
+                #print('sign: ' + str(detected_id) + ' is not and intruder.')
 
-            if count > 10:
+            if count > 4:
                 intruder_detected = True
-
-
-            prev_intruder = detected_id
+                intruder = copy.deepcopy(detected_id)
+   
     else:
-        print('INTRUDER HAS BEEN DETECTED: ' + str(detected_id))
+        print('INTRUDER HAS BEEN DETECTED: ' + str(intruder))
         break
     rate.sleep()
 rospy.spin()
